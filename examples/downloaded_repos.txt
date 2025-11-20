@@ -24,3 +24,8 @@ https://github.com/livekit-examples/agent-deployment.git                        
 https://github.com/livekit-examples/meet.git                                     meet
 https://github.com/livekit-examples/realtime-room-monitor.git                    realtime-room-monitor
 https://github.com/livekit/agents-playground                                     agents-playground
+https://github.com/livekit-examples/agent-starter-python.git                     Starter/agent-starter-python                      
+https://github.com/livekit-examples/agent-starter-react.git                      Starter/agent-starter-react                       
+https://github.com/livekit-examples/agent-starter-android                        Starter/agent-starter-android                     
+https://github.com/livekit/agents-js.git                                         Platform/agents-js                                
+https://github.com/livekit/agents                                                Framework/agents                                  
