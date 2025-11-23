@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: room-manager-agent
+  namespace: meeting-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: room-manager-agent
+  template:
+    metadata:
+      labels:
+        app: room-manager-agent
+    spec:
+      containers:
+      - name: room-manager-agent
+        image: meeting-platform-room-manager-agent:latest
+        imagePullPolicy: Always
+        env:
+        - name: LIVEKIT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: room-manager-agent-config
+              key: LIVEKIT_URL
+        - name: LIVEKIT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: room-manager-agent-secret
+              key: LIVEKIT_API_KEY
+        - name: LIVEKIT_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: room-manager-agent-secret
+              key: LIVEKIT_API_SECRET
+        - name: LANGFUSE_HOST
+          valueFrom:
+            secretKeyRef:
+              name: room-manager-agent-secret
+              key: LANGFUSE_HOST
+        - name: LANGFUSE_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: room-manager-agent-secret
+              key: LANGFUSE_PUBLIC_KEY
+        - name: LANGFUSE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: room-manager-agent-secret
+              key: LANGFUSE_SECRET_KEY
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+

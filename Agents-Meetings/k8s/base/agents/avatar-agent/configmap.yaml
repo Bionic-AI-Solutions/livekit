@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: avatar-agent-config
+  namespace: meeting-platform
+data:
+  LIVEKIT_URL: "ws://livekit:7880"
+  DEFAULT_AVATAR_PROVIDER: "bithuman"
+  AVATAR_PROVIDERS: "bithuman,anam,tavus,hedra"
+  LANGFUSE_ENABLED: "true"
+

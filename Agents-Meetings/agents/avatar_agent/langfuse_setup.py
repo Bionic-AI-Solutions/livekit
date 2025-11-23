@@ -1,0 +1,38 @@
+"""
+Langfuse setup for avatar agent
+"""
+import os
+import base64
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from livekit.agents.telemetry import set_tracer_provider
+
+
+def setup_langfuse(
+    host: str | None = None,
+    public_key: str | None = None,
+    secret_key: str | None = None,
+    metadata: dict | None = None
+) -> TracerProvider | None:
+    """Setup Langfuse OpenTelemetry tracing for avatar agent"""
+    public_key = public_key or os.getenv("LANGFUSE_PUBLIC_KEY")
+    secret_key = secret_key or os.getenv("LANGFUSE_SECRET_KEY")
+    host = host or os.getenv("LANGFUSE_HOST")
+    
+    if not public_key or not secret_key or not host:
+        return None
+    
+    langfuse_auth = base64.b64encode(
+        f"{public_key}:{secret_key}".encode()
+    ).decode()
+    
+    os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"{host.rstrip('/')}/api/public/otel"
+    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth}"
+    
+    trace_provider = TracerProvider()
+    trace_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+    set_tracer_provider(trace_provider, metadata=metadata)
+    
+    return trace_provider
+

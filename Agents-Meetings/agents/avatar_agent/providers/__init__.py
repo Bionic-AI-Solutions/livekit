@@ -1,0 +1,2 @@
+# Avatar providers package
+

@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: meeting-platform
+
+resources:
+- ../../base
+
+replicas:
+- name: backend
+  count: 2
+- name: frontend
+  count: 2
+- name: avatar-agent
+  count: 2
+- name: translation-agent
+  count: 2
+
+configMapGenerator:
+- name: backend-config
+  behavior: merge
+  literals:
+  - ENVIRONMENT=staging
+  - LOG_LEVEL=info
+

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: translation-agent
+  namespace: meeting-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: translation-agent
+  template:
+    metadata:
+      labels:
+        app: translation-agent
+    spec:
+      containers:
+      - name: translation-agent
+        image: meeting-platform-translation-agent:latest
+        imagePullPolicy: Always
+        env:
+        - name: LIVEKIT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: translation-agent-config
+              key: LIVEKIT_URL
+        - name: LIVEKIT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: LIVEKIT_API_KEY
+        - name: LIVEKIT_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: LIVEKIT_API_SECRET
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: OPENAI_API_KEY
+        - name: DEEPGRAM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: DEEPGRAM_API_KEY
+        - name: ELEVENLABS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: ELEVENLABS_API_KEY
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: GOOGLE_API_KEY
+              optional: true
+        - name: LANGFUSE_HOST
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: LANGFUSE_HOST
+        - name: LANGFUSE_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: LANGFUSE_PUBLIC_KEY
+        - name: LANGFUSE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-agent-secret
+              key: LANGFUSE_SECRET_KEY
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+

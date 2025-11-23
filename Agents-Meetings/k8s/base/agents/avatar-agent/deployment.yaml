@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avatar-agent
+  namespace: meeting-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: avatar-agent
+  template:
+    metadata:
+      labels:
+        app: avatar-agent
+    spec:
+      containers:
+      - name: avatar-agent
+        image: meeting-platform-avatar-agent:latest
+        imagePullPolicy: Always
+        env:
+        - name: LIVEKIT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: avatar-agent-config
+              key: LIVEKIT_URL
+        - name: LIVEKIT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: LIVEKIT_API_KEY
+        - name: LIVEKIT_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: LIVEKIT_API_SECRET
+        - name: BITHUMAN_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: BITHUMAN_API_SECRET
+              optional: true
+        - name: BITHUMAN_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: BITHUMAN_API_TOKEN
+              optional: true
+        - name: ANAM_AVATAR_ID
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: ANAM_AVATAR_ID
+              optional: true
+        - name: ANAM_API_URL
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: ANAM_API_URL
+              optional: true
+        - name: TAVUS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: TAVUS_API_KEY
+              optional: true
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: OPENAI_API_KEY
+        - name: ELEVENLABS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: ELEVENLABS_API_KEY
+        - name: LANGFUSE_HOST
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: LANGFUSE_HOST
+        - name: LANGFUSE_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: LANGFUSE_PUBLIC_KEY
+        - name: LANGFUSE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: LANGFUSE_SECRET_KEY
+        - name: DEFAULT_AVATAR_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: avatar-agent-config
+              key: DEFAULT_AVATAR_PROVIDER
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+
