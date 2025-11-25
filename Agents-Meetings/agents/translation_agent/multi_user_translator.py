@@ -363,6 +363,17 @@ class RoomTranslator:
             if track.kind == rtc.TrackKind.KIND_AUDIO:
                 self._remove_track(track)
 
+        @self.room.on("participant_attributes_changed")
+        def on_participant_attributes_changed(
+            changed_attributes: dict[str, str],
+            participant: rtc.Participant,
+        ):
+            """Handle participant language preference changes"""
+            if "language" in changed_attributes:
+                new_language = changed_attributes["language"]
+                logger.info(f"Participant {participant.identity} changed language to: {new_language}")
+                self._update_languages()
+
         self._update_languages()
 
         existing_track_ids = [input_track.track.sid for input_track in self.input_tracks]
@@ -382,9 +393,11 @@ class RoomTranslator:
             if language:
                 languages.add(language)
         self.desired_languages = list(languages)
+        logger.info(f"Updated desired languages: {self.desired_languages} (from {len(self.room.remote_participants)} participants)")
         self._reconcile_translators()
 
     def _add_track(self, track: rtc.RemoteAudioTrack, *, language: str, participant_identity: str):
+        logger.info(f"Adding track {track.sid} from participant {participant_identity} (source language: {language})")
         input_track = InputTrack(
             language=language,
             track=track,
@@ -393,13 +406,16 @@ class RoomTranslator:
         )
         input_track.start()
         self.input_tracks.append(input_track)
+        logger.info(f"Track added. Total input tracks: {len(self.input_tracks)}")
         self._reconcile_translators()
 
     def _remove_track(self, track: rtc.RemoteAudioTrack):
         input_track = next((t for t in self.input_tracks if t.track.sid == track.sid), None)
         if input_track:
+            logger.info(f"Removing track {track.sid} from participant {input_track._participant_identity}")
             asyncio.create_task(input_track.aclose())
             self.input_tracks.remove(input_track)
+            logger.info(f"Track removed. Total input tracks: {len(self.input_tracks)}")
 
     def _reconcile_translators(self):
         for track in self.input_tracks:

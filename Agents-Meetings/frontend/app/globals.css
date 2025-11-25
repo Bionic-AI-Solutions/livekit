@@ -108,13 +108,43 @@ body {
 /* Ensure captions are visible */
 .lk-captions {
   position: fixed !important;
-  bottom: 80px !important;
+  bottom: 100px !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
   z-index: 45 !important;
-  background: rgba(0, 0, 0, 0.8) !important;
-  padding: 10px 20px !important;
-  border-radius: 8px !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(10px) !important;
+  padding: 12px 24px !important;
+  border-radius: 12px !important;
   max-width: 80% !important;
+  min-width: 300px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: opacity 0.3s ease-in-out !important;
+}
+
+.lk-captions ul {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.lk-captions li {
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 4px 0 !important;
+  line-height: 1.5 !important;
+  word-wrap: break-word !important;
+  animation: fadeInUp 0.3s ease-out !important;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 

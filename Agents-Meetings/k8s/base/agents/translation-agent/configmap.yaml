@@ -5,10 +5,10 @@ metadata:
   namespace: meeting-platform
 data:
   # External service URLs - override in overlays for actual service names
-  LIVEKIT_URL: "ws://livekit-service:7880"
+  LIVEKIT_URL: "ws://livekit-server.livekit.svc.cluster.local:7880"
   LANGFUSE_HOST: "langfuse-service"
   LANGFUSE_PORT: "3000"
-  SUPPORTED_LANGUAGES: "en,es,fr,de,ja,zh,hi"
+  SUPPORTED_LANGUAGES: "en,hi,ta,te,bn,mr,gu,kn,ml,pa,or,as,ur,ne"
   STT_PROVIDER: "deepgram"
   TTS_PROVIDER: "elevenlabs"
   TRANSLATION_PROVIDER: "google"

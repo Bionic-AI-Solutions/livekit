@@ -12,6 +12,10 @@ import {
   TrackToggle,
   MediaDeviceMenu
 } from '@livekit/components-react';
+import CaptionsDisplay from '@/components/captions/CaptionsDisplay';
+import { useTranslatedAudioTracks } from '@/hooks/useTranslatedAudioTracks';
+import { useChat } from '@livekit/components-react';
+import { RoomEvent, ChatMessage } from 'livekit-client';
 import { RoomConnectOptions, RoomOptions, VideoPresets, DisconnectReason, Track } from 'livekit-client';
 import { useToast } from '@/components/toast/ToastProvider';
 import apiClient from '@/lib/api';
@@ -141,9 +145,13 @@ export default function MeetingRoomPage() {
         connectOptions={connectOptions}
         onDisconnected={handleDisconnect}
         onError={handleError}
-        onConnected={() => {
+        onConnected={async () => {
           setIsConnecting(false);
           toast.success('Connected to meeting');
+          
+          // Set language attribute immediately after connection
+          // This will be handled by the useEffect in MeetingRoomContent, but we can also set it here
+          // as a backup to ensure it's set early
         }}
       >
         <RoomAudioRenderer />
@@ -177,6 +185,64 @@ function MeetingRoomContent({
   const { localParticipant } = useLocalParticipant();
   const router = useRouter();
   const toast = useToast();
+
+  // Subscribe to translated audio tracks
+  const { isTranslatedAudioActive } = useTranslatedAudioTracks(language);
+  const { chatMessages } = useChat();
+
+  // Handle translated chat messages from the translation agent
+  useEffect(() => {
+    if (!room) return;
+
+    const handleDataReceived = async (
+      payload: Uint8Array,
+      participant?: any,
+      kind?: any,
+      topic?: string
+    ) => {
+      // Handle translated chat messages
+      if (topic === 'lk-chat-translated') {
+        try {
+          const dataStr = new TextDecoder().decode(payload);
+          const data = JSON.parse(dataStr);
+          
+          // If this is a translated message for our language
+          if (data.translated && data.targetLanguage === language) {
+            console.log(`Received translated chat message: ${data.message} (from ${data.sourceLanguage} to ${data.targetLanguage})`);
+            
+            // The message will be displayed by LiveKit's chat system
+            // We can optionally show a toast or indicator
+            if (data.original !== data.message) {
+              // Message was translated
+              toast.info(`Translated message received`);
+            }
+          }
+        } catch (e) {
+          console.error('Error processing translated chat message:', e);
+        }
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+    };
+  }, [room, language, toast]);
+
+  // Set initial language attribute when room connects
+  useEffect(() => {
+    if (room && localParticipant) {
+      const setInitialLanguage = async () => {
+        try {
+          await localParticipant.setAttributes({ language: language });
+          console.log(`Initial language attribute set to: ${language}`);
+        } catch (error) {
+          console.error('Failed to set initial language attribute:', error);
+        }
+      };
+      setInitialLanguage();
+    }
+  }, [room, localParticipant, language]);
 
   // Auto-end meeting when last participant leaves
   useEffect(() => {
@@ -224,11 +290,19 @@ function MeetingRoomContent({
 
   const languages = [
     { code: 'en', name: 'English' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'fr', name: 'French' },
-    { code: 'de', name: 'German' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'zh', name: 'Chinese' },
+    { code: 'hi', name: 'Hindi (हिंदी)' },
+    { code: 'ta', name: 'Tamil (தமிழ்)' },
+    { code: 'te', name: 'Telugu (తెలుగు)' },
+    { code: 'bn', name: 'Bengali (বাংলা)' },
+    { code: 'mr', name: 'Marathi (मराठी)' },
+    { code: 'gu', name: 'Gujarati (ગુજરાતી)' },
+    { code: 'kn', name: 'Kannada (ಕನ್ನಡ)' },
+    { code: 'ml', name: 'Malayalam (മലയാളം)' },
+    { code: 'pa', name: 'Punjabi (ਪੰਜਾਬੀ)' },
+    { code: 'or', name: 'Odia (ଓଡ଼ିଆ)' },
+    { code: 'as', name: 'Assamese (অসমীয়া)' },
+    { code: 'ur', name: 'Urdu (اردو)' },
+    { code: 'ne', name: 'Nepali (नेपाली)' },
   ];
 
   return (
@@ -258,22 +332,43 @@ function MeetingRoomContent({
 
       {/* Language Selector */}
       <div className="absolute top-4 right-4 z-50 bg-black/80 text-white px-3 py-2 rounded-lg backdrop-blur-sm border border-white/20">
-        <label className="text-xs font-semibold mb-1 block">Language</label>
-        <select
-          value={language}
-          onChange={(e) => {
-            setLanguage(e.target.value);
-            localStorage.setItem('language', e.target.value);
-            toast.info(`Language changed to ${languages.find(l => l.code === e.target.value)?.name}`);
-          }}
-          className="bg-black/50 text-white text-xs px-2 py-1 rounded border border-white/20"
-        >
-          {languages.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.name}
-            </option>
-          ))}
-        </select>
+        <label className="text-xs font-semibold mb-1 block">
+          Language {language && `(${languages.find(l => l.code === language)?.name})`}
+        </label>
+        <div className="flex items-center gap-2">
+          <select
+            value={language}
+            onChange={async (e) => {
+              const newLanguage = e.target.value;
+              setLanguage(newLanguage);
+              localStorage.setItem('language', newLanguage);
+              
+              // Update participant attributes for translation agent
+              if (localParticipant) {
+                try {
+                  await localParticipant.setAttributes({ language: newLanguage });
+                  console.log(`Language attribute set to: ${newLanguage}`);
+                  toast.info(`Language changed to ${languages.find(l => l.code === newLanguage)?.name}`);
+                } catch (error) {
+                  console.error('Failed to set language attribute:', error);
+                  toast.error('Failed to change language');
+                }
+              }
+            }}
+            className="bg-black/50 text-white text-xs px-2 py-1 rounded border border-white/20"
+          >
+            {languages.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+          {isTranslatedAudioActive && (
+            <span className="text-green-400 text-xs" title="Translated audio active">
+              🔊
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Custom Controls Bar */}
@@ -332,10 +427,18 @@ function MeetingRoomContent({
       {/* Video Conference - with fixed chat positioning */}
       <div className="h-full w-full" style={{ paddingBottom: '80px' }}>
         <VideoConference
-          chatMessageFormatter={(message) => message}
+          chatMessageFormatter={(message) => {
+            // The translation agent handles translation server-side
+            // Messages are already translated when they arrive
+            // Just return the message as-is
+            return message;
+          }}
           SettingsComponent={undefined}
         />
       </div>
+
+      {/* Captions Display */}
+      <CaptionsDisplay language={language} enabled={true} />
     </div>
   );
 }

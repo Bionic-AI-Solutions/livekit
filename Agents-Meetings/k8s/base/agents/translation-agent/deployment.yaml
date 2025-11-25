@@ -71,6 +71,26 @@ spec:
             secretKeyRef:
               name: translation-agent-secret
               key: LANGFUSE_SECRET_KEY
+        - name: STT_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: translation-agent-config
+              key: STT_PROVIDER
+        - name: TTS_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: translation-agent-config
+              key: TTS_PROVIDER
+        - name: TRANSLATION_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: translation-agent-config
+              key: TRANSLATION_PROVIDER
+        - name: SUPPORTED_LANGUAGES
+          valueFrom:
+            configMapKeyRef:
+              name: translation-agent-config
+              key: SUPPORTED_LANGUAGES
         resources:
           requests:
             memory: "512Mi"
