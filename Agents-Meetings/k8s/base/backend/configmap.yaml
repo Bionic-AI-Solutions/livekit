@@ -19,4 +19,5 @@ data:
   SUPPORTED_LANGUAGES: "en,es,fr,de,ja,zh,hi"
   DEFAULT_AVATAR_PROVIDER: "bithuman"
   LANGFUSE_ENABLED: "true"
+  MAIL_API_URL: "https://mail.bionicaisolutions.com"
 

@@ -4,13 +4,42 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import { useToast } from '@/components/toast/ToastProvider';
+import { isAuthenticated, getCurrentUser, logout } from '@/lib/auth';
 
 export default function JoinMeetingPage() {
   const [meetingId, setMeetingId] = useState('');
   const [language, setLanguage] = useState('en');
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const router = useRouter();
   const toast = useToast();
+
+  // Check authentication and user status
+  useEffect(() => {
+    async function checkAuth() {
+      if (!isAuthenticated()) {
+        toast.error('Please log in to join a meeting');
+        router.push('/login');
+        return;
+      }
+
+      try {
+        const user = await getCurrentUser();
+        if (!user || !user.is_active) {
+          toast.error('Your account is pending approval. Please contact an administrator.');
+          logout();
+          router.push('/login');
+          return;
+        }
+        setAuthLoading(false);
+      } catch (error) {
+        toast.error('Authentication failed. Please log in again.');
+        logout();
+        router.push('/login');
+      }
+    }
+    checkAuth();
+  }, [router, toast]);
 
   // Pre-fill meeting ID from URL parameter or localStorage
   useEffect(() => {
@@ -69,6 +98,14 @@ export default function JoinMeetingPage() {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="container mx-auto p-8 max-w-md">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-8 max-w-md">

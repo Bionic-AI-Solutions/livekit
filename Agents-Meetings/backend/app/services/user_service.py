@@ -14,7 +14,8 @@ def create_user(
     password: str,
     full_name: str,
     role: UserRole = UserRole.PARTICIPANT,
-    language_preference: str = "en"
+    language_preference: str = "en",
+    is_active: bool = False  # New registrations require admin approval
 ) -> User:
     """Create a new user"""
     hashed_password = get_password_hash(password)
@@ -24,7 +25,8 @@ def create_user(
         password_hash=hashed_password,
         full_name=full_name,
         role=role,
-        language_preference=language_preference
+        language_preference=language_preference,
+        is_active=is_active
     )
     db.add(user)
     db.commit()

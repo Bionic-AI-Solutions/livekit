@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.security import require_admin, get_current_user
 from app.models.user import User, UserRole
 from app.services.user_service import (
-    create_user, get_user_by_id, get_users, update_user, delete_user
+    create_user, get_user_by_id, get_users, update_user, delete_user, get_user_by_email
 )
 
 router = APIRouter()
@@ -131,6 +131,20 @@ async def update_user_endpoint(
 ):
     """Update user (Admin only)"""
     import uuid
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Get current user state before update
+    existing_user = get_user_by_id(db, uuid.UUID(user_id))
+    if not existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    was_active = existing_user.is_active
+    will_be_active = user_data.is_active if user_data.is_active is not None else was_active
+    
     user = update_user(
         db=db,
         user_id=uuid.UUID(user_id),
@@ -145,6 +159,109 @@ async def update_user_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    
+    # Send approval/rejection email if status changed
+    if was_active != will_be_active:
+        try:
+            from app.services.email_service import send_approval_email
+            import asyncio
+            # Send email asynchronously without blocking the response
+            asyncio.create_task(send_approval_email(user.email, user.full_name, will_be_active))
+        except Exception as e:
+            logger.error(f"Failed to send approval email: {e}")
+    
+    return UserResponse(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role.value,
+        language_preference=user.language_preference,
+        is_active=user.is_active
+    )
+
+
+@router.post("/{user_id}/approve", response_model=UserResponse)
+async def approve_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin())
+):
+    """Approve user (Admin only)"""
+    import uuid
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    user = get_user_by_id(db, uuid.UUID(user_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already approved"
+        )
+    
+    user = update_user(db=db, user_id=uuid.UUID(user_id), is_active=True)
+    
+    # Send approval email
+    try:
+        from app.services.email_service import send_approval_email
+        import asyncio
+        asyncio.create_task(send_approval_email(user.email, user.full_name, True))
+    except Exception as e:
+        logger.error(f"Failed to send approval email: {e}")
+    
+    return UserResponse(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role.value,
+        language_preference=user.language_preference,
+        is_active=user.is_active
+    )
+
+
+@router.post("/{user_id}/reject", response_model=UserResponse)
+async def reject_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin())
+):
+    """Reject user (Admin only)"""
+    import uuid
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    user = get_user_by_id(db, uuid.UUID(user_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if not user.is_active:
+        # User is already inactive, just send rejection email
+        try:
+            from app.services.email_service import send_approval_email
+            import asyncio
+            asyncio.create_task(send_approval_email(user.email, user.full_name, False))
+        except Exception as e:
+            logger.error(f"Failed to send rejection email: {e}")
+    else:
+        # Deactivate user
+        user = update_user(db=db, user_id=uuid.UUID(user_id), is_active=False)
+        
+        # Send rejection email
+        try:
+            from app.services.email_service import send_approval_email
+            import asyncio
+            asyncio.create_task(send_approval_email(user.email, user.full_name, False))
+        except Exception as e:
+            logger.error(f"Failed to send rejection email: {e}")
+    
     return UserResponse(
         id=str(user.id),
         email=user.email,

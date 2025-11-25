@@ -17,7 +17,7 @@ spec:
       - name: registry-bionicaisolutions-com
       containers:
       - name: backend
-        image: meeting-platform-backend:latest
+        image: registry.bionicaisolutions.com/meeting/meeting-platform-backend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -67,6 +67,16 @@ spec:
             secretKeyRef:
               name: backend-secret
               key: LANGFUSE_SECRET_KEY
+        - name: MAIL_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: MAIL_API_URL
+        - name: MAIL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: MAIL_API_KEY
         - name: ENVIRONMENT
           valueFrom:
             configMapKeyRef:

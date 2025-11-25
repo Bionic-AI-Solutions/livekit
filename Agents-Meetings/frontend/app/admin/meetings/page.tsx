@@ -86,8 +86,12 @@ export default function MeetingsPage() {
           apiClient.get('/meetings/'),
           apiClient.get('/users/')
         ]);
-        setMeetings(meetingsRes.data);
+        const meetingsData = meetingsRes.data;
         setUsers(usersRes.data);
+        
+        // Fetch and update participant counts for all meetings
+        const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
+        setMeetings(meetingsWithCounts);
       } catch (error: any) {
         if (error.response?.status === 401) {
           logout();
@@ -114,6 +118,44 @@ export default function MeetingsPage() {
       setParticipants([]);
     }
   }, [selectedMeeting]);
+
+  async function updateParticipantCountsForAllMeetings(meetingsList: Meeting[]) {
+    // Fetch participant counts for all meetings using the participants API
+    // This works even if rooms don't exist yet (for scheduled meetings)
+    const participantCountPromises = meetingsList.map(async (meeting: Meeting) => {
+      try {
+        // Try to get count from participants API first (works for all meetings)
+        const participantsRes = await apiClient.get(`/participants/meeting/${meeting.id}/participants`).catch(() => ({ data: [] }));
+        let count = participantsRes.data?.length || 0;
+        
+        // If meeting is active, also try to get LiveKit room count (more accurate for active meetings)
+        if (meeting.status === 'active') {
+          try {
+            const roomRes = await apiClient.get(`/rooms/meeting/${meeting.id}`).catch(() => null);
+            if (roomRes?.data?.num_participants !== undefined) {
+              // Use LiveKit count for active meetings as it's more accurate
+              count = roomRes.data.num_participants;
+            }
+          } catch (error) {
+            // Room might not exist yet, use participants count
+            console.log(`Room not found for active meeting ${meeting.id}, using participants count:`, count);
+          }
+        }
+        
+        return { meetingId: meeting.id, count };
+      } catch (error) {
+        console.error(`Error fetching participant count for meeting ${meeting.id}:`, error);
+        return { meetingId: meeting.id, count: 0 };
+      }
+    });
+    
+    const participantCounts = await Promise.all(participantCountPromises);
+    const updated = meetingsList.map((m: Meeting) => {
+      const countData = participantCounts.find(pc => pc.meetingId === m.id);
+      return countData ? { ...m, _livekit_participants: countData.count } : { ...m, _livekit_participants: 0 };
+    });
+    return updated;
+  }
 
   async function fetchParticipants(meetingId: string) {
     try {
@@ -155,7 +197,11 @@ export default function MeetingsPage() {
       await fetchParticipants(meetingId);
       // Also refresh meetings list to ensure data is up to date
       const meetingsRes = await apiClient.get('/meetings/');
-      setMeetings(meetingsRes.data);
+      const meetingsData = meetingsRes.data;
+      
+      // Update participant counts for all meetings
+      const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
+      setMeetings(meetingsWithCounts);
       setShowAddParticipant(false);
       setSelectedUserId('');
       setParticipantLanguage('en');
@@ -177,7 +223,11 @@ export default function MeetingsPage() {
       await fetchParticipants(meetingId);
       // Refresh meetings list
       const meetingsRes = await apiClient.get('/meetings/');
-      setMeetings(meetingsRes.data);
+      const meetingsData = meetingsRes.data;
+      
+      // Update participant counts for all meetings
+      const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
+      setMeetings(meetingsWithCounts);
       toast.success('Participant removed successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Failed to remove participant');
@@ -205,7 +255,11 @@ export default function MeetingsPage() {
       await apiClient.put(`/meetings/${meetingId}`, editForm);
       // Refresh meetings list
       const meetingsRes = await apiClient.get('/meetings/');
-      setMeetings(meetingsRes.data);
+      const meetingsData = meetingsRes.data;
+      
+      // Update participant counts for all meetings
+      const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
+      setMeetings(meetingsWithCounts);
       setEditingMeeting(null);
       setEditForm({});
       toast.success('Meeting updated successfully');
@@ -224,7 +278,11 @@ export default function MeetingsPage() {
       await apiClient.post(`/meetings/${meetingId}/end`);
       // Refresh meetings list
       const meetingsRes = await apiClient.get('/meetings/');
-      setMeetings(meetingsRes.data);
+      const meetingsData = meetingsRes.data;
+      
+      // Update participant counts for all meetings
+      const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
+      setMeetings(meetingsWithCounts);
       toast.success('Meeting ended successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Failed to end meeting');

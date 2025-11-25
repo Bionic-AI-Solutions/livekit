@@ -30,6 +30,7 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     language_preference: str
+    is_active: bool
 
     class Config:
         from_attributes = True
@@ -41,11 +42,31 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """Login endpoint"""
-    user = authenticate_user(db, form_data.username, form_data.password)
+    from app.services.user_service import get_user_by_email
+    from app.core.security import verify_password
+    
+    # Check if user exists first
+    user = get_user_by_email(db, form_data.username)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Verify password
+    if not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Check if user is active (approved)
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account is pending admin approval. Please wait for an administrator to approve your account.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": str(user.id)})
@@ -54,7 +75,7 @@ async def login(
 
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """Register new user (defaults to participant role)"""
+    """Register new user (defaults to participant role, requires admin approval)"""
     # Check if user already exists
     from app.services.user_service import get_user_by_email
     existing_user = get_user_by_email(db, user_data.email)
@@ -64,18 +85,34 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
     
+    # Create user with is_active=False (requires admin approval)
     user = create_user(
         db=db,
         email=user_data.email,
         password=user_data.password,
-        full_name=user_data.full_name
+        full_name=user_data.full_name,
+        is_active=False  # New registrations require admin approval
     )
+    
+    # Send registration email (non-blocking)
+    try:
+        from app.services.email_service import send_registration_email
+        import asyncio
+        # Send email asynchronously without blocking the response
+        asyncio.create_task(send_registration_email(user.email, user.full_name))
+    except Exception as e:
+        # Log error but don't fail registration if email fails
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to send registration email: {e}")
+    
     return UserResponse(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
         role=user.role.value,
-        language_preference=user.language_preference
+        language_preference=user.language_preference,
+        is_active=user.is_active
     )
 
 
@@ -87,6 +124,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         email=current_user.email,
         full_name=current_user.full_name,
         role=current_user.role.value,
-        language_preference=current_user.language_preference
+        language_preference=current_user.language_preference,
+        is_active=current_user.is_active
     )
 

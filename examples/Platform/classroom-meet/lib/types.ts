@@ -6,3 +6,4 @@ export type ConnectionDetails = {
   role: 'teacher' | 'student';
 };
 
+

@@ -26,7 +26,7 @@ class User(Base):
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.PARTICIPANT)
     language_preference = Column(String, default="en")
     avatar_provider_preference = Column(String, nullable=True)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=False)  # New users require admin approval
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

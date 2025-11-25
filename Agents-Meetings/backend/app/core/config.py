@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # Avatar
     DEFAULT_AVATAR_PROVIDER: str = os.getenv("DEFAULT_AVATAR_PROVIDER", "bithuman")
 
+    # Mail Service
+    MAIL_API_URL: str = os.getenv("MAIL_API_URL", "https://mail.bionicaisolutions.com")
+    MAIL_API_KEY: str = os.getenv("MAIL_API_KEY", "")
+
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -14,6 +14,7 @@ export interface User {
   full_name: string;
   role: string;
   language_preference: string;
+  is_active: boolean;
 }
 
 export async function login(credentials: LoginCredentials): Promise<string> {
