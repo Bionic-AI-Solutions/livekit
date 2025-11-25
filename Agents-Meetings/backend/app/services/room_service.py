@@ -10,10 +10,10 @@ from typing import Optional
 import uuid
 
 
-def create_room_for_meeting(db: Session, meeting: Meeting) -> Room:
+async def create_room_for_meeting(db: Session, meeting: Meeting) -> Room:
     """Create a LiveKit room for a meeting"""
     # Create room in LiveKit
-    livekit_room = create_room(meeting.room_name, meeting.max_participants)
+    livekit_room = await create_room(meeting.room_name, meeting.max_participants)
     
     # Create room record
     room = Room(
@@ -79,11 +79,11 @@ def get_room_by_meeting_id(db: Session, meeting_id: uuid.UUID) -> Optional[Room]
     return db.query(Room).filter(Room.meeting_id == meeting_id).first()
 
 
-def cleanup_room(db: Session, room: Room):
+async def cleanup_room(db: Session, room: Room):
     """Cleanup room when meeting ends"""
     # Delete LiveKit room
     try:
-        delete_room(room.livekit_room_name)
+        await delete_room(room.livekit_room_name)
     except Exception:
         pass  # Room may already be deleted
     

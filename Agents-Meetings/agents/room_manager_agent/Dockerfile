@@ -14,6 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Run the agent
-CMD ["python", "-m", "livekit.agents.cli", "dev"]
+# Run the agent - cli.run_app requires 'start' command
+CMD ["python", "agent.py", "start"]
 

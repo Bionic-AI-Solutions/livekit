@@ -4,6 +4,7 @@ Room management endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from typing import Optional
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
@@ -33,6 +34,7 @@ class RoomResponse(BaseModel):
     livekit_room_sid: Optional[str]
     avatar_agent_active: bool
     translation_agent_active: bool
+    num_participants: int = 0
 
     class Config:
         from_attributes = True
@@ -62,7 +64,7 @@ async def get_room_token(
         if meeting.status == MeetingStatus.SCHEDULED:
             meeting.status = MeetingStatus.ACTIVE
             db.commit()
-        room = create_room_for_meeting(db, meeting)
+        room = await create_room_for_meeting(db, meeting)
     
     # Generate token
     token = generate_access_token(
@@ -77,7 +79,7 @@ async def get_room_token(
     return RoomTokenResponse(
         token=token,
         room_name=room.livekit_room_name,
-        ws_url=settings.LIVEKIT_URL
+        ws_url=settings.LIVEKIT_WS_URL
     )
 
 
@@ -89,6 +91,7 @@ async def get_room_by_meeting(
 ):
     """Get room information for a meeting"""
     from app.services.meeting_service import get_meeting_by_id
+    from app.services.livekit_service import get_room_info
     
     meeting = get_meeting_by_id(db, uuid.UUID(meeting_id))
     if not meeting:
@@ -104,12 +107,17 @@ async def get_room_by_meeting(
             detail="Room not found for this meeting"
         )
     
+    # Get current participant count from LiveKit
+    room_info = await get_room_info(room.livekit_room_name)
+    num_participants = room_info.get("num_participants", 0) if room_info else 0
+    
     return RoomResponse(
         id=str(room.id),
         meeting_id=str(room.meeting_id),
         livekit_room_name=room.livekit_room_name,
         livekit_room_sid=room.livekit_room_sid,
         avatar_agent_active=room.avatar_agent_active,
-        translation_agent_active=room.translation_agent_active
+        translation_agent_active=room.translation_agent_active,
+        num_participants=num_participants
     )
 

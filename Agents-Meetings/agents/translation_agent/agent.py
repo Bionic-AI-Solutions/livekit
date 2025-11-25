@@ -4,8 +4,8 @@ Translation agent entrypoint
 import logging
 from dotenv import load_dotenv
 from livekit.agents import AgentServer, AutoSubscribe, JobContext, JobRequest, cli
-from agents.translation_agent.langfuse_setup import setup_langfuse
-from agents.translation_agent.multi_user_translator import RoomTranslator
+from langfuse_setup import setup_langfuse
+from multi_user_translator import RoomTranslator
 
 load_dotenv()
 

@@ -13,6 +13,8 @@ spec:
       labels:
         app: backend
     spec:
+      imagePullSecrets:
+      - name: registry-bionicaisolutions-com
       containers:
       - name: backend
         image: meeting-platform-backend:latest
@@ -35,6 +37,11 @@ spec:
             configMapKeyRef:
               name: backend-config
               key: LIVEKIT_URL
+        - name: LIVEKIT_WS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: LIVEKIT_WS_URL
         - name: LIVEKIT_API_KEY
           valueFrom:
             secretKeyRef:

@@ -6,7 +6,8 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Use npm ci if package-lock.json exists, otherwise use npm install
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -14,7 +15,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV NEXT_TELEMETRY_DISABLED 1
+# Build arguments for environment variables
+ARG NEXT_PUBLIC_API_URL=https://meet.bionicaisolutions.com
+ARG NEXT_PUBLIC_LIVEKIT_URL=ws://livekit-server-lb.livekit.svc.cluster.local:7880
+
+# Set environment variables for build
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_LIVEKIT_URL=${NEXT_PUBLIC_LIVEKIT_URL}
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 

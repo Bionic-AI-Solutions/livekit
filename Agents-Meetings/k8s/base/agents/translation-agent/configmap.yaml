@@ -4,8 +4,11 @@ metadata:
   name: translation-agent-config
   namespace: meeting-platform
 data:
-  LIVEKIT_URL: "ws://livekit:7880"
-  SUPPORTED_LANGUAGES: "en,es,fr,de,ja,zh"
+  # External service URLs - override in overlays for actual service names
+  LIVEKIT_URL: "ws://livekit-service:7880"
+  LANGFUSE_HOST: "langfuse-service"
+  LANGFUSE_PORT: "3000"
+  SUPPORTED_LANGUAGES: "en,es,fr,de,ja,zh,hi"
   STT_PROVIDER: "deepgram"
   TTS_PROVIDER: "elevenlabs"
   TRANSLATION_PROVIDER: "google"

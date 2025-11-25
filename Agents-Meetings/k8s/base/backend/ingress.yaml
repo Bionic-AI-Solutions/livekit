@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-ingress
+  namespace: meeting-platform
+  annotations:
+    # Kong Ingress Controller
+    kubernetes.io/ingress.class: kong
+    # SSL/TLS configuration
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Kong-specific annotations
+    konghq.com/protocols: "http,https"
+    konghq.com/strip-path: "false"
+spec:
+  ingressClassName: kong
+  tls:
+  - hosts:
+    - api.meet.bionicaisolutions.com
+    secretName: backend-tls
+  rules:
+  - host: api.meet.bionicaisolutions.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
+
+
+
+
+
+

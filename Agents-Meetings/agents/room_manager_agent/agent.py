@@ -4,7 +4,7 @@ Room manager agent for room lifecycle management
 import logging
 from dotenv import load_dotenv
 from livekit.agents import AgentServer, JobContext, JobRequest, cli
-from agents.room_manager_agent.langfuse_setup import setup_langfuse
+from langfuse_setup import setup_langfuse
 from opentelemetry import trace
 
 load_dotenv()

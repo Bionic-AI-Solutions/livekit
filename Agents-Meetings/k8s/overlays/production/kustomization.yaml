@@ -8,18 +8,104 @@ resources:
 
 replicas:
 - name: backend
-  count: 3
+  count: 1
 - name: frontend
-  count: 3
+  count: 1
 - name: avatar-agent
-  count: 3
+  count: 1
 - name: translation-agent
-  count: 3
+  count: 1
+- name: room-manager-agent
+  count: 1
 
-configMapGenerator:
-- name: backend-config
-  behavior: merge
-  literals:
-  - ENVIRONMENT=production
-  - LOG_LEVEL=warn
+patches:
+- target:
+    kind: ConfigMap
+    name: backend-config
+  patch: |-
+    - op: replace
+      path: /data/ENVIRONMENT
+      value: production
+    - op: replace
+      path: /data/LOG_LEVEL
+      value: warn
+    - op: replace
+      path: /data/LIVEKIT_URL
+      value: ws://livekit-server-lb.livekit.svc.cluster.local:7880
+    - op: replace
+      path: /data/DATABASE_HOST
+      value: pg-haproxy-primary.pg.svc.cluster.local
+    - op: replace
+      path: /data/DATABASE_PORT
+      value: "5432"
+    - op: add
+      path: /data/DATABASE_NAME
+      value: meeting_platform
+    - op: replace
+      path: /data/CORS_ORIGINS
+      value: https://localhost:3000,https://meet.bionicaisolutions.com,https://bionicaisolutions.com
+    - op: replace
+      path: /data/REDIS_HOST
+      value: redis-cluster.redis.svc.cluster.local
+    - op: replace
+      path: /data/REDIS_PORT
+      value: "6379"
+    - op: replace
+      path: /data/LANGFUSE_HOST
+      value: langfuse-web.langfuse.svc.cluster.local
+    - op: replace
+      path: /data/LANGFUSE_PORT
+      value: "3000"
+- target:
+    kind: ConfigMap
+    name: frontend-config
+  patch: |-
+    - op: replace
+      path: /data/NEXT_PUBLIC_API_URL
+      value: https://meet.bionicaisolutions.com
+    - op: replace
+      path: /data/NEXT_PUBLIC_API_BASE
+      value: https://meet.bionicaisolutions.com
+    - op: replace
+      path: /data/NEXT_PUBLIC_LIVEKIT_URL
+      value: ws://livekit-server-lb.livekit.svc.cluster.local:7880
+- target:
+    kind: ConfigMap
+    name: avatar-agent-config
+  patch: |-
+    - op: replace
+      path: /data/LIVEKIT_URL
+      value: ws://livekit-server-lb.livekit.svc.cluster.local:7880
+    - op: replace
+      path: /data/LANGFUSE_HOST
+      value: langfuse-web.langfuse.svc.cluster.local
+    - op: replace
+      path: /data/LANGFUSE_PORT
+      value: "3000"
+- target:
+    kind: ConfigMap
+    name: translation-agent-config
+  patch: |-
+    - op: replace
+      path: /data/LIVEKIT_URL
+      value: ws://livekit-server-lb.livekit.svc.cluster.local:7880
+    - op: replace
+      path: /data/LANGFUSE_HOST
+      value: langfuse-web.langfuse.svc.cluster.local
+    - op: replace
+      path: /data/LANGFUSE_PORT
+      value: "3000"
+- target:
+    kind: ConfigMap
+    name: room-manager-agent-config
+  patch: |-
+    - op: replace
+      path: /data/LIVEKIT_URL
+      value: ws://livekit-server-lb.livekit.svc.cluster.local:7880
+    - op: replace
+      path: /data/LANGFUSE_HOST
+      value: langfuse-web.langfuse.svc.cluster.local
+    - op: replace
+      path: /data/LANGFUSE_PORT
+      value: "3000"
 

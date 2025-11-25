@@ -13,6 +13,8 @@ spec:
       labels:
         app: room-manager-agent
     spec:
+      imagePullSecrets:
+      - name: registry-bionicaisolutions-com
       containers:
       - name: room-manager-agent
         image: meeting-platform-room-manager-agent:latest

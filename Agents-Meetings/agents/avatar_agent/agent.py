@@ -5,19 +5,21 @@ import logging
 import os
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
-from livekit.agents import Agent, AgentSession, JobContext, cli
+from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli
 from livekit.plugins import openai, silero, deepgram, elevenlabs
-from agents.avatar_agent.langfuse_setup import setup_langfuse
-from agents.avatar_agent.providers.bithuman import BitHumanProvider
-from agents.avatar_agent.providers.anam import AnamProvider
-from agents.avatar_agent.providers.tavus import TavusProvider
-from agents.avatar_agent.providers.hedra import HedraProvider
-from agents.avatar_agent.providers.base import AvatarProvider
+from langfuse_setup import setup_langfuse
+from providers.bithuman import BitHumanProvider
+from providers.anam import AnamProvider
+from providers.tavus import TavusProvider
+from providers.hedra import HedraProvider
+from providers.base import AvatarProvider
 
 load_dotenv()
 
 logger = logging.getLogger("avatar_agent")
 logger.setLevel(logging.INFO)
+
+server = AgentServer()
 
 
 def get_avatar_provider(provider_name: str, config: Optional[Dict[str, Any]] = None) -> AvatarProvider:
@@ -36,6 +38,7 @@ def get_avatar_provider(provider_name: str, config: Optional[Dict[str, Any]] = N
         raise ValueError(f"Unknown avatar provider: {provider_name}")
 
 
+@server.rtc_session()
 async def entrypoint(ctx: JobContext):
     """Avatar agent entrypoint"""
     # Setup Langfuse
@@ -96,5 +99,5 @@ async def entrypoint(ctx: JobContext):
 
 
 if __name__ == "__main__":
-    cli.run_app(entrypoint)
+    cli.run_app(server)
 

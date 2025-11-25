@@ -26,3 +26,95 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* LiveKit Components Styling */
+[data-lk-theme] {
+  height: 100%;
+  width: 100%;
+}
+
+/* Fix for video conference layout */
+.lk-video-conference {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure controls are visible */
+.lk-control-bar {
+  z-index: 50;
+  position: relative;
+}
+
+.lk-button {
+  cursor: pointer;
+}
+
+/* Ensure proper cleanup on disconnect */
+.lk-participant-tile {
+  position: relative;
+}
+
+/* Prevent layout shifts */
+.lk-grid-layout {
+  min-height: 100%;
+}
+
+/* Make sure participant tiles are visible */
+.lk-participant-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Ensure control bar is always visible */
+.lk-control-bar {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+/* Fix chat positioning - ensure it's visible and properly positioned */
+.lk-chat {
+  position: fixed !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 400px !important;
+  max-width: 100vw !important;
+  z-index: 40 !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  overflow-y: auto !important;
+}
+
+.lk-chat-toggle {
+  position: fixed !important;
+  right: 20px !important;
+  bottom: 100px !important;
+  z-index: 50 !important;
+}
+
+/* Ensure video grid doesn't overlap with controls */
+.lk-grid-layout {
+  padding-bottom: 100px !important;
+}
+
+/* Fix chat messages container */
+.lk-chat-messages {
+  padding: 20px !important;
+  height: calc(100% - 120px) !important;
+  overflow-y: auto !important;
+}
+
+/* Ensure captions are visible */
+.lk-captions {
+  position: fixed !important;
+  bottom: 80px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 45 !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  max-width: 80% !important;
+}
+

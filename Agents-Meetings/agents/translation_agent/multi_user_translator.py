@@ -26,7 +26,7 @@ from livekit.agents.types import (
     TOPIC_TRANSCRIPTION,
 )
 from livekit.plugins import deepgram, elevenlabs, google
-from agents.translation_agent.langfuse_setup import setup_langfuse
+from langfuse_setup import setup_langfuse
 
 logger = logging.getLogger("translation_agent")
 

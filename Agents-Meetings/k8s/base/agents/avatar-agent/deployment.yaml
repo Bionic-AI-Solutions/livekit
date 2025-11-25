@@ -13,6 +13,8 @@ spec:
       labels:
         app: avatar-agent
     spec:
+      imagePullSecrets:
+      - name: registry-bionicaisolutions-com
       containers:
       - name: avatar-agent
         image: meeting-platform-avatar-agent:latest

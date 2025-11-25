@@ -1,0 +1,51 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: meeting-platform
+
+resources:
+  - namespace.yaml
+  # Application components
+  - backend/deployment.yaml
+  - backend/service.yaml
+  - backend/configmap.yaml
+  - backend/secret.yaml
+  - backend/ingress.yaml
+  - frontend/deployment.yaml
+  - frontend/service.yaml
+  - frontend/configmap.yaml
+  - frontend/ingress.yaml
+  # Agents
+  - agents/avatar-agent/deployment.yaml
+  - agents/avatar-agent/service.yaml
+  - agents/avatar-agent/configmap.yaml
+  - agents/avatar-agent/secret.yaml
+  - agents/translation-agent/deployment.yaml
+  - agents/translation-agent/service.yaml
+  - agents/translation-agent/configmap.yaml
+  - agents/translation-agent/secret.yaml
+  - agents/room-manager-agent/deployment.yaml
+  - agents/room-manager-agent/service.yaml
+  - agents/room-manager-agent/configmap.yaml
+  - agents/room-manager-agent/secret.yaml
+
+# Note: Postgres, LiveKit, and Langfuse are pre-existing services
+# They should be referenced via external service names in ConfigMaps
+
+images:
+  - name: meeting-platform-backend
+    newName: registry.bionicaisolutions.com/meeting/meeting-platform-backend
+    newTag: latest
+  - name: meeting-platform-frontend
+    newName: registry.bionicaisolutions.com/meeting/meeting-platform-frontend
+    newTag: latest
+  - name: meeting-platform-avatar-agent
+    newName: registry.bionicaisolutions.com/meeting/meeting-platform-avatar-agent
+    newTag: latest
+  - name: meeting-platform-translation-agent
+    newName: registry.bionicaisolutions.com/meeting/meeting-platform-translation-agent
+    newTag: latest
+  - name: meeting-platform-room-manager-agent
+    newName: registry.bionicaisolutions.com/meeting/meeting-platform-room-manager-agent
+    newTag: latest
+

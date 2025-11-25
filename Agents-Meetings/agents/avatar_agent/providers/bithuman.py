@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from livekit.agents.voice import AgentSession
 from livekit import rtc
 from livekit.plugins import bithuman
-from agents.avatar_agent.providers.base import AvatarProvider
+from providers.base import AvatarProvider
 import os
 
 

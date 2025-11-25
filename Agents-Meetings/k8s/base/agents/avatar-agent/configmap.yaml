@@ -4,7 +4,10 @@ metadata:
   name: avatar-agent-config
   namespace: meeting-platform
 data:
-  LIVEKIT_URL: "ws://livekit:7880"
+  # External service URLs - override in overlays for actual service names
+  LIVEKIT_URL: "ws://livekit-service:7880"
+  LANGFUSE_HOST: "langfuse-service"
+  LANGFUSE_PORT: "3000"
   DEFAULT_AVATAR_PROVIDER: "bithuman"
   AVATAR_PROVIDERS: "bithuman,anam,tavus,hedra"
   LANGFUSE_ENABLED: "true"

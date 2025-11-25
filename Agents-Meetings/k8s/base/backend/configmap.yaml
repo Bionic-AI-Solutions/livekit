@@ -6,9 +6,17 @@ metadata:
 data:
   ENVIRONMENT: "production"
   LOG_LEVEL: "info"
-  CORS_ORIGINS: "http://localhost:3000,https://yourdomain.com"
-  LIVEKIT_URL: "ws://livekit:7880"
-  SUPPORTED_LANGUAGES: "en,es,fr,de,ja,zh"
+  CORS_ORIGINS: "https://localhost:3000,https://meet.bionicaisolutions.com,https://bionicaisolutions.com"
+  # External service URLs - override in overlays for actual service names
+  LIVEKIT_URL: "http://livekit-server.livekit.svc.cluster.local:7880"
+  LIVEKIT_WS_URL: "wss://livekit.bionicaisolutions.com"
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  LANGFUSE_HOST: "langfuse-service"
+  LANGFUSE_PORT: "3000"
+  SUPPORTED_LANGUAGES: "en,es,fr,de,ja,zh,hi"
   DEFAULT_AVATAR_PROVIDER: "bithuman"
   LANGFUSE_ENABLED: "true"
 

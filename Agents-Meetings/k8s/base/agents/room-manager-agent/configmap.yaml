@@ -4,6 +4,9 @@ metadata:
   name: room-manager-agent-config
   namespace: meeting-platform
 data:
-  LIVEKIT_URL: "ws://livekit:7880"
+  # External service URLs - override in overlays for actual service names
+  LIVEKIT_URL: "ws://livekit-service:7880"
+  LANGFUSE_HOST: "langfuse-service"
+  LANGFUSE_PORT: "3000"
   LANGFUSE_ENABLED: "true"
 

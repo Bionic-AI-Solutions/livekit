@@ -6,6 +6,7 @@ from app.core.livekit import get_livekit_client
 from app.core.config import settings
 from typing import Optional, Dict
 import uuid
+import json
 
 
 def generate_access_token(
@@ -33,14 +34,14 @@ def generate_access_token(
         .with_name(participant_name) \
         .with_grants(grant)
     
-    # Add language as attribute
+    # Add language as metadata (must be JSON string, not dict)
     if language:
-        token.with_metadata({"language": language})
+        token.with_metadata(json.dumps({"language": language}))
     
     return token.to_jwt()
 
 
-def create_room(room_name: str, max_participants: Optional[int] = None) -> Dict:
+async def create_room(room_name: str, max_participants: Optional[int] = None) -> Dict:
     """Create a LiveKit room"""
     client = get_livekit_client()
     
@@ -48,7 +49,7 @@ def create_room(room_name: str, max_participants: Optional[int] = None) -> Dict:
     if max_participants:
         room_options.max_participants = max_participants
     
-    room = client.room.create_room(room_options)
+    room = await client.room.create_room(room_options)
     return {
         "name": room.name,
         "sid": room.sid,
@@ -57,17 +58,39 @@ def create_room(room_name: str, max_participants: Optional[int] = None) -> Dict:
     }
 
 
-def delete_room(room_name: str):
+async def delete_room(room_name: str):
     """Delete a LiveKit room"""
     client = get_livekit_client()
-    client.room.delete_room(api.DeleteRoomRequest(room=room_name))
+    await client.room.delete_room(api.DeleteRoomRequest(room=room_name))
 
 
-def list_rooms() -> list:
+async def list_rooms() -> list:
     """List all LiveKit rooms"""
     client = get_livekit_client()
-    rooms = client.room.list_rooms()
+    rooms = await client.room.list_rooms()
     return [{"name": r.name, "sid": r.sid} for r in rooms.rooms]
+
+
+async def get_room_info(room_name: str) -> Optional[Dict]:
+    """Get room information including participant count"""
+    client = get_livekit_client()
+    try:
+        room = await client.room.list_rooms(names=[room_name])
+        if room.rooms and len(room.rooms) > 0:
+            r = room.rooms[0]
+            # Room object should have num_participants field
+            num_participants = getattr(r, 'num_participants', 0)
+            return {
+                "name": r.name,
+                "sid": r.sid,
+                "num_participants": num_participants,
+                "empty_timeout": r.empty_timeout,
+                "max_participants": r.max_participants,
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting room info: {e}")
+        return None
 
 
 def dispatch_agent(

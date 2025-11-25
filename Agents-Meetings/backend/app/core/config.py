@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     # LiveKit
     LIVEKIT_URL: str = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
+    LIVEKIT_WS_URL: str = os.getenv("LIVEKIT_WS_URL", os.getenv("LIVEKIT_URL", "ws://localhost:7880"))
     LIVEKIT_API_KEY: str = os.getenv("LIVEKIT_API_KEY", "")
     LIVEKIT_API_SECRET: str = os.getenv("LIVEKIT_API_SECRET", "")
 
@@ -35,17 +36,17 @@ class Settings(BaseSettings):
     LANGFUSE_SECRET_KEY: str = os.getenv("LANGFUSE_SECRET_KEY", "")
     LANGFUSE_ENABLED: bool = os.getenv("LANGFUSE_ENABLED", "true").lower() == "true"
 
-    # CORS
-    CORS_ORIGINS: List[str] = os.getenv(
+    # CORS - stored as string, will be parsed in main.py
+    CORS_ORIGINS: str = os.getenv(
         "CORS_ORIGINS",
         "http://localhost:3000,http://localhost:3001"
-    ).split(",")
+    )
 
-    # Supported languages
-    SUPPORTED_LANGUAGES: List[str] = os.getenv(
+    # Supported languages - stored as string, will be parsed where used
+    SUPPORTED_LANGUAGES: str = os.getenv(
         "SUPPORTED_LANGUAGES",
         "en,es,fr,de,ja,zh"
-    ).split(",")
+    )
 
     # Avatar
     DEFAULT_AVATAR_PROVIDER: str = os.getenv("DEFAULT_AVATAR_PROVIDER", "bithuman")

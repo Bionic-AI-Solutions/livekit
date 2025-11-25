@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.v1 import auth, users, meetings, rooms, admin
+from app.api.v1 import auth, users, meetings, rooms, admin, participants
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -16,10 +16,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS middleware
+# CORS middleware - parse comma-separated origins
+cors_origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,6 +32,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(meetings.router, prefix="/api/v1/meetings", tags=["meetings"])
 app.include_router(rooms.router, prefix="/api/v1/rooms", tags=["rooms"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(participants.router, prefix="/api/v1/participants", tags=["participants"])
 
 
 @app.get("/")

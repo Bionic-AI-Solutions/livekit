@@ -4,6 +4,7 @@ metadata:
   name: frontend-config
   namespace: meeting-platform
 data:
-  NEXT_PUBLIC_API_URL: "http://backend:8000"
-  NEXT_PUBLIC_LIVEKIT_URL: "ws://livekit:7880"
+  NEXT_PUBLIC_API_URL: "https://backend:8000"
+  # External service URLs - override in overlays for actual service names
+  NEXT_PUBLIC_LIVEKIT_URL: "ws://livekit-service:7880"
 

@@ -6,7 +6,7 @@ from PIL import Image
 from livekit.agents.voice import AgentSession
 from livekit import rtc
 from livekit.plugins import hedra
-from agents.avatar_agent.providers.base import AvatarProvider
+from providers.base import AvatarProvider
 import os
 
 

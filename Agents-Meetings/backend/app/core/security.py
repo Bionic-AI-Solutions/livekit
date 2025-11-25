@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.core.config import settings
@@ -12,18 +13,46 @@ from app.models.user import User, UserRole
 from app.core.database import get_db
 from sqlalchemy.orm import Session
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Initialize passlib context with bcrypt
+# Use bcrypt directly as fallback if passlib has issues
+try:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    # Test that it works
+    pwd_context.hash("test")
+except Exception:
+    # If passlib fails, we'll use bcrypt directly
+    pwd_context = None
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    if pwd_context:
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception:
+            pass
+    # Fallback to bcrypt directly
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password"""
-    return pwd_context.hash(password)
+    if pwd_context:
+        try:
+            return pwd_context.hash(password)
+        except Exception:
+            pass
+    # Fallback to bcrypt directly
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -74,4 +103,14 @@ def require_role(*allowed_roles: UserRole):
             )
         return current_user
     return role_checker
+
+
+def require_admin() -> User:
+    """Require admin role"""
+    return require_role(UserRole.ADMIN)
+
+
+def require_teacher_or_host() -> User:
+    """Require teacher or host role (or admin)"""
+    return require_role(UserRole.TEACHER, UserRole.HOST, UserRole.ADMIN)
 

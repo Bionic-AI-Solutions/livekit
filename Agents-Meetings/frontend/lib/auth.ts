@@ -21,9 +21,10 @@ export async function login(credentials: LoginCredentials): Promise<string> {
   formData.append('username', credentials.username);
   formData.append('password', credentials.password);
   
+  // Don't set Content-Type manually - axios will set it with boundary for FormData
   const response = await apiClient.post('/auth/login', formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      // Remove Content-Type to let axios set it automatically with boundary
     },
   });
   

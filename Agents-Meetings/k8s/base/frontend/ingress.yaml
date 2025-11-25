@@ -4,17 +4,33 @@ metadata:
   name: frontend-ingress
   namespace: meeting-platform
   annotations:
-    kubernetes.io/ingress.class: nginx
+    # Kong Ingress Controller
+    kubernetes.io/ingress.class: kong
+    # Kong-specific annotations
+    konghq.com/protocols: "https"
+    konghq.com/strip-path: "false"
+    # SSL/TLS configuration
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
+  ingressClassName: kong
+  # TLS enabled for HTTPS
   tls:
   - hosts:
-    - meeting-platform.yourdomain.com
+    - meet.bionicaisolutions.com
     secretName: frontend-tls
   rules:
-  - host: meeting-platform.yourdomain.com
+  - host: meet.bionicaisolutions.com
     http:
       paths:
+      # API routes to backend - must be before frontend route
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
+      # Frontend routes - catch-all
       - path: /
         pathType: Prefix
         backend:

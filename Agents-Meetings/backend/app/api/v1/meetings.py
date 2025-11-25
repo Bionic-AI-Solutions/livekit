@@ -251,3 +251,59 @@ async def update_meeting_endpoint(
         created_at=updated_meeting.created_at
     )
 
+
+@router.post("/{meeting_id}/end", response_model=MeetingResponse)
+async def end_meeting_endpoint(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """End an active meeting"""
+    from app.services.room_service import get_room_by_meeting_id, cleanup_room
+    
+    meeting = get_meeting_by_id(db, uuid.UUID(meeting_id))
+    if not meeting:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found"
+        )
+    
+    # Check permissions - only admin or meeting creator can end
+    if current_user.role != UserRole.ADMIN and meeting.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to end this meeting"
+        )
+    
+    # Only end if meeting is active
+    if meeting.status != MeetingStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Meeting is not active (current status: {meeting.status.value})"
+        )
+    
+    # Cleanup room if it exists
+    room = get_room_by_meeting_id(db, meeting.id)
+    if room:
+        await cleanup_room(db, room)
+    
+    # Update meeting status
+    meeting.status = MeetingStatus.ENDED
+    db.commit()
+    db.refresh(meeting)
+    
+    return MeetingResponse(
+        id=str(meeting.id),
+        title=meeting.title,
+        description=meeting.description,
+        meeting_type=meeting.meeting_type.value,
+        room_name=meeting.room_name,
+        host_type=meeting.host_type.value if meeting.host_type else None,
+        use_avatar_host=meeting.use_avatar_host,
+        avatar_provider=meeting.avatar_provider,
+        translation_enabled=meeting.translation_enabled,
+        supported_languages=meeting.supported_languages,
+        status=meeting.status.value,
+        created_at=meeting.created_at
+    )
+

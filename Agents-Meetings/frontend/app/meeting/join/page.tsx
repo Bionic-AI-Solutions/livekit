@@ -1,14 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
+import { useToast } from '@/components/toast/ToastProvider';
 
 export default function JoinMeetingPage() {
   const [meetingId, setMeetingId] = useState('');
   const [language, setLanguage] = useState('en');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const toast = useToast();
+
+  // Pre-fill meeting ID from URL parameter or localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // First check URL parameter
+      const params = new URLSearchParams(window.location.search);
+      const meetingIdParam = params.get('meetingId');
+      if (meetingIdParam) {
+        setMeetingId(meetingIdParam);
+        // Also preserve in localStorage
+        localStorage.setItem('meeting_id', meetingIdParam);
+      } else {
+        // Fallback to localStorage if no URL param
+        const storedMeetingId = localStorage.getItem('meeting_id');
+        if (storedMeetingId) {
+          setMeetingId(storedMeetingId);
+          // Update URL to include meeting ID
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('meetingId', storedMeetingId);
+          window.history.replaceState({}, '', newUrl.toString());
+        }
+      }
+      
+      // Also check for stored language preference
+      const storedLanguage = localStorage.getItem('language');
+      if (storedLanguage) {
+        setLanguage(storedLanguage);
+      }
+    }
+  }, []);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +58,13 @@ export default function JoinMeetingPage() {
       localStorage.setItem('room_name', room_name);
       localStorage.setItem('ws_url', ws_url);
       localStorage.setItem('language', language);
+      localStorage.setItem('meeting_id', meetingId);
       
       router.push(`/meeting/room/${room_name}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to join meeting:', error);
-      alert('Failed to join meeting');
+      const errorMsg = error.response?.data?.detail || 'Failed to join meeting';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
