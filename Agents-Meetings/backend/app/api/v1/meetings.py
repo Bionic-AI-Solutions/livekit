@@ -11,7 +11,7 @@ from app.core.security import get_current_user, require_teacher_or_host
 from app.models.user import User, UserRole
 from app.models.meeting import Meeting, MeetingType, MeetingStatus, HostType
 from app.services.meeting_service import (
-    create_meeting, get_meeting_by_id, get_meetings, update_meeting, add_participant
+    create_meeting, get_meeting_by_id, get_meetings, update_meeting, add_participant, delete_meeting
 )
 from app.services.observability_service import create_meeting_trace
 import uuid
@@ -135,6 +135,43 @@ async def create_meeting_endpoint(
     )
 
 
+@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting_endpoint(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a meeting (Admin only, or meeting creator)"""
+    meeting = get_meeting_by_id(db, uuid.UUID(meeting_id))
+    if not meeting:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found"
+        )
+    
+    # Check permissions - only admin or meeting creator can delete
+    if current_user.role != UserRole.ADMIN and meeting.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this meeting"
+        )
+    
+    # If meeting is active, cleanup room first
+    if meeting.status == MeetingStatus.ACTIVE:
+        from app.services.room_service import get_room_by_meeting_id, cleanup_room
+        room = get_room_by_meeting_id(db, meeting.id)
+        if room:
+            await cleanup_room(db, room)
+    
+    # Delete meeting (cascade will handle participants)
+    success = delete_meeting(db, uuid.UUID(meeting_id))
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found"
+        )
+
+
 @router.get("/", response_model=List[MeetingResponse])
 async def list_meetings(
     skip: int = 0,
@@ -209,6 +246,43 @@ async def get_meeting(
         status=meeting.status.value,
         created_at=meeting.created_at
     )
+
+
+@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting_endpoint(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a meeting (Admin only, or meeting creator)"""
+    meeting = get_meeting_by_id(db, uuid.UUID(meeting_id))
+    if not meeting:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found"
+        )
+    
+    # Check permissions - only admin or meeting creator can delete
+    if current_user.role != UserRole.ADMIN and meeting.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this meeting"
+        )
+    
+    # If meeting is active, cleanup room first
+    if meeting.status == MeetingStatus.ACTIVE:
+        from app.services.room_service import get_room_by_meeting_id, cleanup_room
+        room = get_room_by_meeting_id(db, meeting.id)
+        if room:
+            await cleanup_room(db, room)
+    
+    # Delete meeting (cascade will handle participants)
+    success = delete_meeting(db, uuid.UUID(meeting_id))
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found"
+        )
 
 
 @router.put("/{meeting_id}", response_model=MeetingResponse)
@@ -306,4 +380,41 @@ async def end_meeting_endpoint(
         status=meeting.status.value,
         created_at=meeting.created_at
     )
+
+
+@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting_endpoint(
+    meeting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a meeting (Admin only, or meeting creator)"""
+    meeting = get_meeting_by_id(db, uuid.UUID(meeting_id))
+    if not meeting:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found"
+        )
+    
+    # Check permissions - only admin or meeting creator can delete
+    if current_user.role != UserRole.ADMIN and meeting.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this meeting"
+        )
+    
+    # If meeting is active, cleanup room first
+    if meeting.status == MeetingStatus.ACTIVE:
+        from app.services.room_service import get_room_by_meeting_id, cleanup_room
+        room = get_room_by_meeting_id(db, meeting.id)
+        if room:
+            await cleanup_room(db, room)
+    
+    # Delete meeting (cascade will handle participants)
+    success = delete_meeting(db, uuid.UUID(meeting_id))
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found"
+        )
 

@@ -5,7 +5,7 @@ import logging
 import os
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
-from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli
+from livekit.agents import Agent, AgentServer, AgentSession, JobContext, JobRequest, cli
 from livekit.plugins import openai, silero, deepgram, elevenlabs
 from langfuse_setup import setup_langfuse
 from providers.bithuman import BitHumanProvider
@@ -38,7 +38,14 @@ def get_avatar_provider(provider_name: str, config: Optional[Dict[str, Any]] = N
         raise ValueError(f"Unknown avatar provider: {provider_name}")
 
 
-@server.rtc_session()
+async def request_fnc(req: JobRequest):
+    await req.accept(
+        name="avatar",
+        identity="avatar-host",
+    )
+
+
+@server.rtc_session(agent_name="avatar", on_request=request_fnc)
 async def entrypoint(ctx: JobContext):
     """Avatar agent entrypoint"""
     # Setup Langfuse
@@ -56,19 +63,40 @@ async def entrypoint(ctx: JobContext):
     
     await ctx.connect()
     
-    # Get avatar configuration from room metadata or environment
+    # Get avatar configuration from dispatch metadata, room metadata, or environment
     avatar_provider_name = os.getenv("DEFAULT_AVATAR_PROVIDER", "bithuman")
     avatar_config = {}
     
-    # Try to get config from room metadata
-    if ctx.room.metadata:
-        import json
+    import json
+    
+    # First, try to get config from dispatch metadata (JobRequest)
+    # This is the primary source as it's passed directly when dispatching the agent
+    if hasattr(ctx, 'job') and ctx.job and ctx.job.metadata:
+        try:
+            dispatch_metadata = json.loads(ctx.job.metadata)
+            if isinstance(dispatch_metadata, dict):
+                provider = dispatch_metadata.get("provider")
+                config = dispatch_metadata.get("config", {})
+                if provider:
+                    avatar_provider_name = provider
+                if config:
+                    avatar_config = config
+                logger.info(f"Loaded avatar config from dispatch metadata: provider={avatar_provider_name}, config={avatar_config}")
+        except Exception as e:
+            logger.warning(f"Failed to parse dispatch metadata: {e}")
+    
+    # Fallback to room metadata if dispatch metadata not available
+    if not avatar_config and ctx.room.metadata:
         try:
             metadata = json.loads(ctx.room.metadata)
-            avatar_provider_name = metadata.get("avatar_provider", avatar_provider_name)
-            avatar_config = metadata.get("avatar_config", {})
-        except:
-            pass
+            if isinstance(metadata, dict):
+                if "avatar_provider" in metadata:
+                    avatar_provider_name = metadata.get("avatar_provider", avatar_provider_name)
+                if "avatar_config" in metadata:
+                    avatar_config = metadata.get("avatar_config", {})
+                logger.info(f"Loaded avatar config from room metadata: provider={avatar_provider_name}, config={avatar_config}")
+        except Exception as e:
+            logger.warning(f"Failed to parse room metadata: {e}")
     
     # Create agent session
     session = AgentSession(

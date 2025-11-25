@@ -105,6 +105,21 @@ export default function UsersPage() {
     }
   }
 
+  async function handleDelete(userId: string) {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/users/${userId}`);
+      toast.success('User deleted successfully');
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Failed to delete user:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete user');
+    }
+  }
+
   const filteredUsers = users.filter((user) => {
     if (filter === 'all') return true;
     if (filter === 'pending') return !user.is_active;
@@ -294,6 +309,13 @@ export default function UsersPage() {
                             Deactivate
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDelete(user.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                          title="Delete user permanently"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>

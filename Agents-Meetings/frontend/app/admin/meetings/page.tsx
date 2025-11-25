@@ -18,6 +18,7 @@ interface Meeting {
   translation_enabled: boolean;
   supported_languages: string[];
   created_at: string;
+  scheduled_at?: string;
 }
 
 interface Participant {
@@ -38,18 +39,49 @@ interface User {
   role: string;
 }
 
+const COLORS = [
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-purple-500',
+  'bg-orange-500',
+  'bg-pink-500',
+  'bg-indigo-500',
+  'bg-yellow-500',
+  'bg-red-500',
+  'bg-teal-500',
+  'bg-cyan-500',
+];
+
+const SUPPORTED_LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'hi', name: 'Hindi (हिंदी)' },
+  { code: 'ta', name: 'Tamil (தமிழ்)' },
+  { code: 'te', name: 'Telugu (తెలుగు)' },
+  { code: 'bn', name: 'Bengali (বাংলা)' },
+  { code: 'mr', name: 'Marathi (मराठी)' },
+  { code: 'gu', name: 'Gujarati (ગુજરાતી)' },
+  { code: 'kn', name: 'Kannada (ಕನ್ನಡ)' },
+  { code: 'ml', name: 'Malayalam (മലയാളം)' },
+  { code: 'pa', name: 'Punjabi (ਪੰਜਾਬੀ)' },
+  { code: 'or', name: 'Odia (ଓଡ଼ିଆ)' },
+  { code: 'as', name: 'Assamese (অসমীয়া)' },
+  { code: 'ur', name: 'Urdu (اردو)' },
+  { code: 'ne', name: 'Nepali (नेपाली)' },
+];
+
 export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
-  const [selectedMeeting, setSelectedMeeting] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Meeting>>({});
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [showAddParticipant, setShowAddParticipant] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [participantLanguage, setParticipantLanguage] = useState('en');
-  const [editingMeeting, setEditingMeeting] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Meeting>>({});
   const router = useRouter();
   const toast = useToast();
 
@@ -108,36 +140,23 @@ export default function MeetingsPage() {
 
   useEffect(() => {
     if (selectedMeeting) {
-      fetchParticipants(selectedMeeting);
-      // Poll for participant count updates every 5 seconds
-      const interval = setInterval(() => {
-        fetchParticipants(selectedMeeting);
-      }, 5000);
-      return () => clearInterval(interval);
-    } else {
-      setParticipants([]);
+      fetchParticipants(selectedMeeting.id);
     }
   }, [selectedMeeting]);
 
   async function updateParticipantCountsForAllMeetings(meetingsList: Meeting[]) {
-    // Fetch participant counts for all meetings using the participants API
-    // This works even if rooms don't exist yet (for scheduled meetings)
     const participantCountPromises = meetingsList.map(async (meeting: Meeting) => {
       try {
-        // Try to get count from participants API first (works for all meetings)
         const participantsRes = await apiClient.get(`/participants/meeting/${meeting.id}/participants`).catch(() => ({ data: [] }));
         let count = participantsRes.data?.length || 0;
         
-        // If meeting is active, also try to get LiveKit room count (more accurate for active meetings)
         if (meeting.status === 'active') {
           try {
             const roomRes = await apiClient.get(`/rooms/meeting/${meeting.id}`).catch(() => null);
             if (roomRes?.data?.num_participants !== undefined) {
-              // Use LiveKit count for active meetings as it's more accurate
               count = roomRes.data.num_participants;
             }
           } catch (error) {
-            // Room might not exist yet, use participants count
             console.log(`Room not found for active meeting ${meeting.id}, using participants count:`, count);
           }
         }
@@ -164,10 +183,8 @@ export default function MeetingsPage() {
         apiClient.get(`/rooms/meeting/${meetingId}`).catch(() => ({ data: { num_participants: 0 } }))
       ]);
       setParticipants(participantsRes.data || []);
-      // Update meeting with actual participant count from LiveKit
       const numParticipants = roomRes.data?.num_participants || 0;
       if (numParticipants > 0) {
-        // Update the meeting in the list to show correct count
         setMeetings(prev => prev.map(m => 
           m.id === meetingId ? { ...m, _livekit_participants: numParticipants } : m
         ));
@@ -184,22 +201,15 @@ export default function MeetingsPage() {
       return;
     }
 
-    console.log('Adding participant:', { meetingId, selectedUserId, participantLanguage });
-    
     try {
-      const response = await apiClient.post(`/participants/meeting/${meetingId}/participants`, {
+      await apiClient.post(`/participants/meeting/${meetingId}/participants`, {
         user_id: selectedUserId,
         language_preference: participantLanguage
       });
-      console.log('Participant added successfully:', response.data);
       
-      // Refresh participants list
       await fetchParticipants(meetingId);
-      // Also refresh meetings list to ensure data is up to date
       const meetingsRes = await apiClient.get('/meetings/');
       const meetingsData = meetingsRes.data;
-      
-      // Update participant counts for all meetings
       const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
       setMeetings(meetingsWithCounts);
       setShowAddParticipant(false);
@@ -221,11 +231,8 @@ export default function MeetingsPage() {
     try {
       await apiClient.delete(`/participants/meeting/${meetingId}/participants/${participantId}`);
       await fetchParticipants(meetingId);
-      // Refresh meetings list
       const meetingsRes = await apiClient.get('/meetings/');
       const meetingsData = meetingsRes.data;
-      
-      // Update participant counts for all meetings
       const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
       setMeetings(meetingsWithCounts);
       toast.success('Participant removed successfully');
@@ -235,32 +242,15 @@ export default function MeetingsPage() {
     }
   }
 
-  function handleEditMeeting(meeting: Meeting) {
-    setEditingMeeting(meeting.id);
-    setEditForm({
-      title: meeting.title,
-      description: meeting.description || '',
-      translation_enabled: meeting.translation_enabled,
-      supported_languages: meeting.supported_languages || ['en']
-    });
-  }
-
-  function handleCancelEdit() {
-    setEditingMeeting(null);
-    setEditForm({});
-  }
-
   async function handleSaveMeeting(meetingId: string) {
     try {
       await apiClient.put(`/meetings/${meetingId}`, editForm);
-      // Refresh meetings list
       const meetingsRes = await apiClient.get('/meetings/');
       const meetingsData = meetingsRes.data;
-      
-      // Update participant counts for all meetings
       const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
       setMeetings(meetingsWithCounts);
-      setEditingMeeting(null);
+      setShowEditModal(false);
+      setSelectedMeeting(null);
       setEditForm({});
       toast.success('Meeting updated successfully');
     } catch (error: any) {
@@ -276,11 +266,8 @@ export default function MeetingsPage() {
 
     try {
       await apiClient.post(`/meetings/${meetingId}/end`);
-      // Refresh meetings list
       const meetingsRes = await apiClient.get('/meetings/');
       const meetingsData = meetingsRes.data;
-      
-      // Update participant counts for all meetings
       const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
       setMeetings(meetingsWithCounts);
       toast.success('Meeting ended successfully');
@@ -290,6 +277,81 @@ export default function MeetingsPage() {
     }
   }
 
+  async function handleDeleteMeeting(meetingId: string) {
+    if (!confirm('Are you sure you want to delete this meeting? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/meetings/${meetingId}`);
+      const meetingsRes = await apiClient.get('/meetings/');
+      const meetingsData = meetingsRes.data;
+      const meetingsWithCounts = await updateParticipantCountsForAllMeetings(meetingsData);
+      setMeetings(meetingsWithCounts);
+      setShowEditModal(false);
+      setSelectedMeeting(null);
+      toast.success('Meeting deleted successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to delete meeting');
+      console.error('Error deleting meeting:', error);
+    }
+  }
+
+  function handleMeetingClick(meeting: Meeting) {
+    setSelectedMeeting(meeting);
+    setEditForm({
+      title: meeting.title,
+      description: meeting.description || '',
+      translation_enabled: meeting.translation_enabled,
+      supported_languages: meeting.supported_languages || ['en']
+    });
+    setShowEditModal(true);
+  }
+
+  function getMeetingsForDate(date: Date): Meeting[] {
+    const dateStr = date.toISOString().split('T')[0];
+    return meetings.filter(meeting => {
+      if (!meeting.scheduled_at) {
+        // If no scheduled_at, use created_at
+        const meetingDate = new Date(meeting.created_at).toISOString().split('T')[0];
+        return meetingDate === dateStr;
+      }
+      const meetingDate = new Date(meeting.scheduled_at).toISOString().split('T')[0];
+      return meetingDate === dateStr;
+    });
+  }
+
+  function getCalendarDays() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  }
+
+  function getMeetingColor(meeting: Meeting, index: number): string {
+    return COLORS[index % COLORS.length];
+  }
+
+  function navigateMonth(direction: number) {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
+  }
+
   if (authLoading || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -297,6 +359,10 @@ export default function MeetingsPage() {
       </div>
     );
   }
+
+  const calendarDays = getCalendarDays();
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
     <div className="container mx-auto p-8">
@@ -312,268 +378,278 @@ export default function MeetingsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6">
-        {meetings.map((meeting) => (
-          <div key={meeting.id} className="bg-white p-6 rounded shadow">
-            {editingMeeting === meeting.id ? (
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-4">Edit Meeting</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={editForm.title || ''}
-                      onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                      className="w-full px-3 py-2 border rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Description</label>
-                    <textarea
-                      value={editForm.description || ''}
-                      onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                      className="w-full px-3 py-2 border rounded"
-                      rows={3}
-                    />
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={editForm.translation_enabled || false}
-                        onChange={(e) => setEditForm({...editForm, translation_enabled: e.target.checked})}
-                        className="rounded"
-                      />
-                      <span className="text-sm font-medium">Translation Enabled</span>
-                    </label>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Supported Languages (comma-separated)</label>
-                    <input
-                      type="text"
-                      value={editForm.supported_languages?.join(', ') || 'en'}
-                      onChange={(e) => setEditForm({
-                        ...editForm,
-                        supported_languages: e.target.value.split(',').map(l => l.trim()).filter(l => l)
-                      })}
-                      className="w-full px-3 py-2 border rounded"
-                      placeholder="en, es, fr"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleSaveMeeting(meeting.id)}
-                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      {/* Calendar Navigation */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <button
+            onClick={() => navigateMonth(-1)}
+            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            ← Previous
+          </button>
+          <h2 className="text-2xl font-semibold">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </h2>
+          <button
+            onClick={() => navigateMonth(1)}
+            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Next →
+          </button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-2">
+          {/* Day Headers */}
+          {dayNames.map(day => (
+            <div key={day} className="text-center font-semibold text-gray-700 py-2">
+              {day}
+            </div>
+          ))}
+
+          {/* Calendar Days */}
+          {calendarDays.map((date, index) => {
+            if (!date) {
+              return <div key={`empty-${index}`} className="aspect-square"></div>;
+            }
+
+            const dayMeetings = getMeetingsForDate(date);
+            const isToday = date.toDateString() === new Date().toDateString();
+
+            return (
+              <div
+                key={date.toISOString()}
+                className={`aspect-square border rounded p-2 ${isToday ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'} hover:bg-gray-50 transition-colors`}
+              >
+                <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                  {date.getDate()}
+                </div>
+                <div className="space-y-1">
+                  {dayMeetings.slice(0, 3).map((meeting, idx) => (
+                    <div
+                      key={meeting.id}
+                      className={`${getMeetingColor(meeting, idx)} text-white text-xs px-1 py-0.5 rounded cursor-pointer hover:opacity-80 truncate`}
+                      title={meeting.title}
+                      onClick={() => handleMeetingClick(meeting)}
                     >
-                      Save Changes
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                      {meeting.title}
+                    </div>
+                  ))}
+                  {dayMeetings.length > 3 && (
+                    <div className="text-xs text-gray-500">
+                      +{dayMeetings.length - 3} more
+                    </div>
+                  )}
                 </div>
               </div>
-            ) : (
-              <>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h2 className="text-xl font-semibold">{meeting.title}</h2>
-                    {meeting.description && (
-                      <p className="text-gray-600 mt-1">{meeting.description}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditMeeting(meeting)}
-                      className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-                    {meeting.status === 'active' && (
-                      <button
-                        onClick={() => handleEndMeeting(meeting.id)}
-                        className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                      >
-                        End Meeting
-                      </button>
-                    )}
-                    <span className={`px-3 py-1 rounded text-sm ${
-                      meeting.status === 'active' ? 'bg-green-100 text-green-800' :
-                      meeting.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {meeting.status}
-                    </span>
-                    <span className="px-3 py-1 rounded text-sm bg-purple-100 text-purple-800">
-                      {meeting.meeting_type}
-                    </span>
-                  </div>
-                </div>
+            );
+          })}
+        </div>
+      </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">
-                  <div>
-                    <strong>Meeting ID:</strong> 
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{meeting.id}</code>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(meeting.id);
-                          toast.success('Meeting ID copied to clipboard!');
+      {/* Edit Meeting Modal */}
+      {showEditModal && selectedMeeting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Edit Meeting</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedMeeting(null);
+                  setEditForm({});
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editForm.title || ''}
+                  onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={editForm.description || ''}
+                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  className="w-full px-3 py-2 border rounded"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editForm.translation_enabled || false}
+                    onChange={(e) => setEditForm({...editForm, translation_enabled: e.target.checked})}
+                    className="rounded"
+                  />
+                  <span className="text-sm font-medium">Translation Enabled</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Supported Languages *</label>
+                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded p-3">
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <label key={lang.code} className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={editForm.supported_languages?.includes(lang.code) || false}
+                        onChange={(e) => {
+                          const currentLangs = editForm.supported_languages || ['en'];
+                          if (e.target.checked) {
+                            setEditForm({
+                              ...editForm,
+                              supported_languages: [...currentLangs, lang.code]
+                            });
+                          } else {
+                            if (currentLangs.length > 1) {
+                              setEditForm({
+                                ...editForm,
+                                supported_languages: currentLangs.filter(l => l !== lang.code)
+                              });
+                            } else {
+                              toast.warning('At least one language must be selected');
+                            }
+                          }
                         }}
-                        className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
-                        title="Copy Meeting ID"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <strong>Room:</strong> {meeting.room_name}
-                  </div>
-                  <div>
-                    <strong>Host Type:</strong> {meeting.host_type || 'N/A'}
-                  </div>
-                  <div>
-                    <strong>Translation:</strong> {meeting.translation_enabled ? 'Enabled' : 'Disabled'}
-                  </div>
-                  <div>
-                    <strong>Languages:</strong> {meeting.supported_languages?.join(', ') || 'en'}
-                  </div>
-                  <div className="col-span-2">
-                    <Link
-                      href={`/meeting/join?meetingId=${encodeURIComponent(meeting.id)}`}
-                      className="inline-block px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                    >
-                      Join Meeting
-                    </Link>
-                  </div>
+                        className="mr-2"
+                      />
+                      <span className="text-sm">{lang.name}</span>
+                    </label>
+                  ))}
                 </div>
-              </>
-            )}
+              </div>
 
-            <div className="border-t pt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-semibold">
-                  Participants ({selectedMeeting === meeting.id ? participants.length : (meeting as any)._livekit_participants || 0})
-                </h3>
-                {selectedMeeting === meeting.id ? (
-                  <div className="flex gap-2">
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2">Participants ({participants.length})</h3>
+                {showAddParticipant && (
+                  <div className="bg-gray-50 p-4 rounded mb-4">
+                    <h4 className="font-semibold mb-2">Add Participant</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">User</label>
+                        <select
+                          value={selectedUserId}
+                          onChange={(e) => setSelectedUserId(e.target.value)}
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="">Select a user...</option>
+                          {users.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.full_name} ({user.email}) - {user.role}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Language</label>
+                        <select
+                          value={participantLanguage}
+                          onChange={(e) => setParticipantLanguage(e.target.value)}
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="en">English</option>
+                          <option value="hi">Hindi (हिंदी)</option>
+                          <option value="ta">Tamil (தமிழ்)</option>
+                          <option value="te">Telugu (తెలుగు)</option>
+                          <option value="bn">Bengali (বাংলা)</option>
+                          <option value="mr">Marathi (मराठी)</option>
+                          <option value="gu">Gujarati (ગુજરાતી)</option>
+                          <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                          <option value="ml">Malayalam (മലയാളം)</option>
+                          <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                          <option value="or">Odia (ଓଡ଼ିଆ)</option>
+                          <option value="as">Assamese (অসমীয়া)</option>
+                          <option value="ur">Urdu (اردو)</option>
+                          <option value="ne">Nepali (नेपाली)</option>
+                        </select>
+                      </div>
+                    </div>
                     <button
-                      onClick={() => setShowAddParticipant(!showAddParticipant)}
-                      className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                      onClick={() => handleAddParticipant(selectedMeeting.id)}
+                      className="mt-3 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
                     >
-                      {showAddParticipant ? 'Cancel' : 'Add Participant'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedMeeting(null);
-                        setShowAddParticipant(false);
-                      }}
-                      className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
-                    >
-                      Hide
+                      Add Participant
                     </button>
                   </div>
-                ) : (
+                )}
+
+                <div className="flex gap-2 mb-2">
                   <button
-                    onClick={() => setSelectedMeeting(meeting.id)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    onClick={() => setShowAddParticipant(!showAddParticipant)}
+                    className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
                   >
-                    View Participants
+                    {showAddParticipant ? 'Cancel' : 'Add Participant'}
                   </button>
+                </div>
+
+                {participants.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No participants yet</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {participants.map((participant) => (
+                      <div key={participant.id} className="flex justify-between items-center bg-gray-50 p-3 rounded">
+                        <div>
+                          <div className="font-medium">{participant.user_name}</div>
+                          <div className="text-sm text-gray-600">
+                            {participant.user_email} • Language: {participant.language_preference} • Status: {participant.status}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveParticipant(selectedMeeting.id, participant.id)}
+                          className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {editingMeeting !== meeting.id && selectedMeeting === meeting.id && (
-                <div className="mt-4">
-                  {showAddParticipant && (
-                    <div className="bg-gray-50 p-4 rounded mb-4">
-                      <h4 className="font-semibold mb-2">Add Participant</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">User</label>
-                          <select
-                            value={selectedUserId}
-                            onChange={(e) => setSelectedUserId(e.target.value)}
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="">Select a user...</option>
-                            {users.map((user) => (
-                              <option key={user.id} value={user.id}>
-                                {user.full_name} ({user.email}) - {user.role}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Language</label>
-                          <select
-                            value={participantLanguage}
-                            onChange={(e) => setParticipantLanguage(e.target.value)}
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="en">English</option>
-                            <option value="hi">Hindi (हिंदी)</option>
-                            <option value="ta">Tamil (தமிழ்)</option>
-                            <option value="te">Telugu (తెలుగు)</option>
-                            <option value="bn">Bengali (বাংলা)</option>
-                            <option value="mr">Marathi (मराठी)</option>
-                            <option value="gu">Gujarati (ગુજરાતી)</option>
-                            <option value="kn">Kannada (ಕನ್ನಡ)</option>
-                            <option value="ml">Malayalam (മലയാളം)</option>
-                            <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
-                            <option value="or">Odia (ଓଡ଼ିଆ)</option>
-                            <option value="as">Assamese (অসমীয়া)</option>
-                            <option value="ur">Urdu (اردو)</option>
-                            <option value="ne">Nepali (नेपाली)</option>
-                          </select>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleAddParticipant(meeting.id)}
-                        className="mt-3 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                      >
-                        Add Participant
-                      </button>
-                    </div>
-                  )}
-
-                  {participants.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No participants yet</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {participants.map((participant) => (
-                        <div key={participant.id} className="flex justify-between items-center bg-gray-50 p-3 rounded">
-                          <div>
-                            <div className="font-medium">{participant.user_name}</div>
-                            <div className="text-sm text-gray-600">
-                              {participant.user_email} • Language: {participant.language_preference} • Status: {participant.status}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveParticipant(meeting.id, participant.id)}
-                            className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="flex gap-2 pt-4 border-t">
+                <button
+                  onClick={() => handleSaveMeeting(selectedMeeting.id)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Save Changes
+                </button>
+                {selectedMeeting.status === 'active' && (
+                  <button
+                    onClick={() => handleEndMeeting(selectedMeeting.id)}
+                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    End Meeting
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDeleteMeeting(selectedMeeting.id)}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Delete Meeting
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedMeeting(null);
+                    setEditForm({});
+                  }}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      {meetings.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <p>No meetings found. Create your first meeting to get started.</p>
         </div>
       )}
     </div>

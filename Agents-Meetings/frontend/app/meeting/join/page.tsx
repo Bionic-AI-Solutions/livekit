@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import apiClient from '@/lib/api';
 import { useToast } from '@/components/toast/ToastProvider';
 import { isAuthenticated, getCurrentUser, logout } from '@/lib/auth';
@@ -109,6 +110,14 @@ export default function JoinMeetingPage() {
 
   return (
     <div className="container mx-auto p-8 max-w-md">
+      <div className="mb-6">
+        <Link
+          href="/admin/dashboard"
+          className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
+        >
+          ← Back to Dashboard
+        </Link>
+      </div>
       <h1 className="text-3xl font-bold mb-8">Join Meeting</h1>
       <form onSubmit={handleJoin} className="space-y-4">
         <div>

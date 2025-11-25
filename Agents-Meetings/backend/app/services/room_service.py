@@ -12,8 +12,19 @@ import uuid
 
 async def create_room_for_meeting(db: Session, meeting: Meeting) -> Room:
     """Create a LiveKit room for a meeting"""
-    # Create room in LiveKit
-    livekit_room = await create_room(meeting.room_name, meeting.max_participants)
+    # Prepare room metadata for avatar agent configuration
+    import json
+    room_metadata = {}
+    if meeting.meeting_type.value == "classroom" or \
+       (meeting.meeting_type.value == "meeting" and meeting.host_type == HostType.AVATAR):
+        room_metadata = {
+            "avatar_provider": meeting.avatar_provider or "bithuman",
+            "avatar_config": meeting.avatar_config or {}
+        }
+    
+    # Create room in LiveKit with metadata
+    room_metadata_str = json.dumps(room_metadata) if room_metadata else None
+    livekit_room = await create_room(meeting.room_name, meeting.max_participants, room_metadata_str)
     
     # Create room record
     room = Room(
@@ -40,18 +51,18 @@ async def create_room_for_meeting(db: Session, meeting: Meeting) -> Room:
     
     # Dispatch agents based on meeting configuration
     if meeting.translation_enabled:
-        dispatch_translation_agent(db, room)
+        await dispatch_translation_agent(db, room)
     
     if meeting.meeting_type.value == "classroom" or \
        (meeting.meeting_type.value == "meeting" and meeting.host_type == HostType.AVATAR):
-        dispatch_avatar_agent(db, room, meeting)
+        await dispatch_avatar_agent(db, room, meeting)
     
     return room
 
 
-def dispatch_translation_agent(db: Session, room: Room) -> str:
+async def dispatch_translation_agent(db: Session, room: Room) -> str:
     """Dispatch translation agent to room"""
-    job_id = dispatch_agent(room.livekit_room_name, "translation")
+    job_id = await dispatch_agent(room.livekit_room_name, "translation")
     room.translation_agent_active = True
     room.agent_job_id = job_id
     db.commit()
@@ -59,13 +70,13 @@ def dispatch_translation_agent(db: Session, room: Room) -> str:
     return job_id
 
 
-def dispatch_avatar_agent(db: Session, room: Room, meeting: Meeting) -> str:
+async def dispatch_avatar_agent(db: Session, room: Room, meeting: Meeting) -> str:
     """Dispatch avatar agent to room"""
     agent_config = {
         "provider": meeting.avatar_provider or "bithuman",
         "config": meeting.avatar_config or {}
     }
-    job_id = dispatch_agent(room.livekit_room_name, "avatar", agent_config)
+    job_id = await dispatch_agent(room.livekit_room_name, "avatar", agent_config)
     room.avatar_agent_active = True
     if not room.agent_job_id:
         room.agent_job_id = job_id

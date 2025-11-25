@@ -70,11 +70,16 @@ spec:
             secretKeyRef:
               name: avatar-agent-secret
               key: OPENAI_API_KEY
-        - name: ELEVENLABS_API_KEY
+        - name: ELEVEN_API_KEY
           valueFrom:
             secretKeyRef:
               name: avatar-agent-secret
               key: ELEVENLABS_API_KEY
+        - name: DEEPGRAM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: avatar-agent-secret
+              key: DEEPGRAM_API_KEY
         - name: LANGFUSE_HOST
           valueFrom:
             secretKeyRef:

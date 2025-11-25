@@ -139,3 +139,15 @@ def get_meeting_participants(db: Session, meeting_id: uuid.UUID) -> List[Meeting
     """Get all participants for a meeting"""
     return db.query(MeetingParticipant).filter(MeetingParticipant.meeting_id == meeting_id).all()
 
+
+def delete_meeting(db: Session, meeting_id: uuid.UUID) -> bool:
+    """Delete a meeting and its associated data"""
+    meeting = get_meeting_by_id(db, meeting_id)
+    if not meeting:
+        return False
+    
+    # Delete meeting (cascade will handle participants and room)
+    db.delete(meeting)
+    db.commit()
+    return True
+

@@ -16,7 +16,8 @@ def generate_access_token(
     language: Optional[str] = None,
     can_publish: bool = True,
     can_subscribe: bool = True,
-    can_publish_data: bool = True
+    can_publish_data: bool = True,
+    can_update_own_metadata: bool = True
 ) -> str:
     """Generate LiveKit access token"""
     client = get_livekit_client()
@@ -27,6 +28,7 @@ def generate_access_token(
         can_publish=can_publish,
         can_subscribe=can_subscribe,
         can_publish_data=can_publish_data,
+        can_update_own_metadata=can_update_own_metadata,
     )
     
     token = api.AccessToken(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET) \
@@ -41,13 +43,15 @@ def generate_access_token(
     return token.to_jwt()
 
 
-async def create_room(room_name: str, max_participants: Optional[int] = None) -> Dict:
+async def create_room(room_name: str, max_participants: Optional[int] = None, metadata: Optional[str] = None) -> Dict:
     """Create a LiveKit room"""
     client = get_livekit_client()
     
     room_options = api.CreateRoomRequest(name=room_name)
     if max_participants:
         room_options.max_participants = max_participants
+    if metadata:
+        room_options.metadata = metadata
     
     room = await client.room.create_room(room_options)
     return {
@@ -93,19 +97,50 @@ async def get_room_info(room_name: str) -> Optional[Dict]:
         return None
 
 
-def dispatch_agent(
+async def dispatch_agent(
     room_name: str,
     agent_type: str,
     agent_config: Optional[Dict] = None
 ) -> str:
-    """Dispatch an agent to a room"""
+    """Dispatch an agent to a room using LiveKit agent dispatch API"""
     client = get_livekit_client()
     
-    # Create agent dispatch request
-    # Note: This is a simplified version - actual implementation depends on LiveKit agent dispatch API
-    job_id = str(uuid.uuid4())
+    # Map agent types to agent names (must match agent_name in agent decorator)
+    agent_name_map = {
+        "avatar": "avatar",
+        "translation": "translator",
+        "room_manager": "room_manager"
+    }
     
-    # In a real implementation, you would use the agent dispatch API
-    # For now, return a job ID
-    return job_id
+    agent_name = agent_name_map.get(agent_type, agent_type)
+    
+    # Prepare metadata for the agent (as JSON string)
+    metadata = ""
+    if agent_config:
+        import json
+        metadata = json.dumps(agent_config)
+    
+    try:
+        # Create agent dispatch using LiveKit API
+        # This will trigger the agent to join the room automatically
+        dispatch = await client.agent_dispatch.create_dispatch(
+            api.CreateAgentDispatchRequest(
+                agent_name=agent_name,
+                room=room_name,
+                metadata=metadata
+            )
+        )
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Successfully dispatched {agent_type} agent ({agent_name}) to room {room_name}, dispatch_id: {dispatch.id}")
+        
+        return dispatch.id
+    except Exception as e:
+        # Log error but don't fail - agent might still connect via other means
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to dispatch {agent_type} agent ({agent_name}) to room {room_name}: {e}", exc_info=True)
+        # Return a placeholder job ID for tracking
+        return str(uuid.uuid4())
 

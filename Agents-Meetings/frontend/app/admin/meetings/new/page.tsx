@@ -21,17 +21,34 @@ export default function NewMeetingPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const availableLanguages = ['en', 'es', 'fr', 'de', 'ja', 'zh'];
+  const availableLanguages = [
+    { code: 'en', name: 'English' },
+    { code: 'hi', name: 'Hindi (हिंदी)' },
+    { code: 'ta', name: 'Tamil (தமிழ்)' },
+    { code: 'te', name: 'Telugu (తెలుగు)' },
+    { code: 'bn', name: 'Bengali (বাংলা)' },
+    { code: 'mr', name: 'Marathi (मराठी)' },
+    { code: 'gu', name: 'Gujarati (ગુજરાતી)' },
+    { code: 'kn', name: 'Kannada (ಕನ್ನಡ)' },
+    { code: 'ml', name: 'Malayalam (മലയാളം)' },
+    { code: 'pa', name: 'Punjabi (ਪੰਜਾਬੀ)' },
+    { code: 'or', name: 'Odia (ଓଡ଼ିଆ)' },
+    { code: 'as', name: 'Assamese (অসমীয়া)' },
+    { code: 'ur', name: 'Urdu (اردو)' },
+    { code: 'ne', name: 'Nepali (नेपाली)' },
+  ];
 
-  const handleLanguageToggle = (lang: string) => {
-    if (supportedLanguages.includes(lang)) {
+  const handleLanguageToggle = (langCode: string) => {
+    if (supportedLanguages.includes(langCode)) {
       if (supportedLanguages.length > 1) {
-        setSupportedLanguages(supportedLanguages.filter(l => l !== lang));
+        setSupportedLanguages(supportedLanguages.filter(l => l !== langCode));
+        setError('');
       } else {
         setError('At least one language must be selected');
       }
     } else {
-      setSupportedLanguages([...supportedLanguages, lang]);
+      setSupportedLanguages([...supportedLanguages, langCode]);
+      setError('');
     }
   };
 
@@ -186,16 +203,16 @@ export default function NewMeetingPage() {
 
         <div>
           <label className="block text-sm font-medium mb-2">Supported Languages *</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded p-3">
             {availableLanguages.map((lang) => (
-              <label key={lang} className="flex items-center">
+              <label key={lang.code} className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
                 <input
                   type="checkbox"
-                  checked={supportedLanguages.includes(lang)}
-                  onChange={() => handleLanguageToggle(lang)}
+                  checked={supportedLanguages.includes(lang.code)}
+                  onChange={() => handleLanguageToggle(lang.code)}
                   className="mr-2"
                 />
-                {lang.toUpperCase()}
+                <span className="text-sm">{lang.name}</span>
               </label>
             ))}
           </div>

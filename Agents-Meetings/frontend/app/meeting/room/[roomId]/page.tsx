@@ -63,30 +63,23 @@ export default function MeetingRoomPage() {
   }
 
   const handleDisconnect = useCallback((reason?: DisconnectReason) => {
-    // Preserve meeting_id for redirect
-    const preservedMeetingId = meetingId || localStorage.getItem('meeting_id');
-    
-    // Clean up localStorage (but preserve meeting_id temporarily)
+    // Clean up localStorage
     localStorage.removeItem('room_token');
     localStorage.removeItem('room_name');
     localStorage.removeItem('ws_url');
     localStorage.removeItem('language');
-    
-    // Preserve meeting_id for redirect
-    if (preservedMeetingId) {
-      localStorage.setItem('meeting_id', preservedMeetingId);
-    }
+    localStorage.removeItem('meeting_id');
     
     if (reason === DisconnectReason.CLIENT_INITIATED) {
       toast.info('You left the meeting');
-      // Redirect with meeting ID prefilled
-      router.push(preservedMeetingId ? `/meeting/join?meetingId=${encodeURIComponent(preservedMeetingId)}` : '/meeting/join');
+      // Redirect to Manage Meetings page
+      router.push('/admin/meetings');
     } else if (reason) {
       toast.warning('Connection lost');
-      // Redirect with meeting ID prefilled
-      router.push(preservedMeetingId ? `/meeting/join?meetingId=${encodeURIComponent(preservedMeetingId)}` : '/meeting/join');
+      // Redirect to Manage Meetings page
+      router.push('/admin/meetings');
     }
-  }, [router, toast, meetingId]);
+  }, [router, toast]);
 
   const handleEndMeeting = useCallback(async () => {
     if (!meetingId) return;
@@ -98,7 +91,16 @@ export default function MeetingRoomPage() {
     try {
       await apiClient.post(`/meetings/${meetingId}/end`);
       toast.success('Meeting ended');
-      router.push('/meeting/join');
+      
+      // Clean up localStorage
+      localStorage.removeItem('room_token');
+      localStorage.removeItem('room_name');
+      localStorage.removeItem('ws_url');
+      localStorage.removeItem('language');
+      localStorage.removeItem('meeting_id');
+      
+      // Redirect to Manage Meetings page
+      router.push('/admin/meetings');
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Failed to end meeting');
     }
@@ -273,19 +275,19 @@ function MeetingRoomContent({
   }, [room, participants]);
 
   const handleLeave = useCallback(() => {
-    // Get meeting ID before disconnecting
-    const preservedMeetingId = localStorage.getItem('meeting_id');
+    // Clean up localStorage
+    localStorage.removeItem('room_token');
+    localStorage.removeItem('room_name');
+    localStorage.removeItem('ws_url');
+    localStorage.removeItem('language');
+    localStorage.removeItem('meeting_id');
     
     if (room) {
       room.disconnect();
     }
     
-    // Redirect with meeting ID
-    if (preservedMeetingId) {
-      router.push(`/meeting/join?meetingId=${encodeURIComponent(preservedMeetingId)}`);
-    } else {
-      router.push('/meeting/join');
-    }
+    // Redirect to Manage Meetings page
+    router.push('/admin/meetings');
   }, [room, router]);
 
   const languages = [
