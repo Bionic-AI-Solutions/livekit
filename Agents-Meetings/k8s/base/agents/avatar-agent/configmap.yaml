@@ -4,11 +4,10 @@ metadata:
   name: avatar-agent-config
   namespace: meeting-platform
 data:
-  # External service URLs - override in overlays for actual service names
-  LIVEKIT_URL: "ws://livekit-server.livekit.svc.cluster.local:7880"
-  LANGFUSE_HOST: "langfuse-service"
-  LANGFUSE_PORT: "3000"
-  DEFAULT_AVATAR_PROVIDER: "bithuman"
+  # Avatar-agent-specific configuration only
   AVATAR_PROVIDERS: "bithuman,anam,tavus,hedra"
-  LANGFUSE_ENABLED: "true"
+  # BitHuman Model Path (for local mode)
+  # Set this to the path of your BitHuman model file, e.g., /app/models/bithuman/model.bin
+  # Leave empty to use cloud mode (requires avatar_id or avatar_image)
+  BITHUMAN_MODEL_PATH: "/app/models/bithuman/scarlett_monroe.imx"
 

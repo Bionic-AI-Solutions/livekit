@@ -4,7 +4,7 @@ metadata:
   name: avatar-agent
   namespace: meeting-platform
 spec:
-  replicas: 2
+  replicas: 2  # Can scale to multiple replicas with ReadWriteMany (cephfs)
   selector:
     matchLabels:
       app: avatar-agent
@@ -17,23 +17,23 @@ spec:
       - name: registry-bionicaisolutions-com
       containers:
       - name: avatar-agent
-        image: meeting-platform-avatar-agent:latest
+        image: registry.bionicaisolutions.com/meeting/meeting-platform-avatar-agent:latest
         imagePullPolicy: Always
         env:
         - name: LIVEKIT_URL
           valueFrom:
             configMapKeyRef:
-              name: avatar-agent-config
+              name: common-config
               key: LIVEKIT_URL
         - name: LIVEKIT_API_KEY
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: LIVEKIT_API_KEY
         - name: LIVEKIT_API_SECRET
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: LIVEKIT_API_SECRET
         - name: BITHUMAN_API_SECRET
           valueFrom:
@@ -68,38 +68,48 @@ spec:
         - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: OPENAI_API_KEY
         - name: ELEVEN_API_KEY
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: ELEVENLABS_API_KEY
         - name: DEEPGRAM_API_KEY
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: DEEPGRAM_API_KEY
         - name: LANGFUSE_HOST
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: LANGFUSE_HOST
         - name: LANGFUSE_PUBLIC_KEY
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: LANGFUSE_PUBLIC_KEY
         - name: LANGFUSE_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: avatar-agent-secret
+              name: common-secrets
               key: LANGFUSE_SECRET_KEY
         - name: DEFAULT_AVATAR_PROVIDER
           valueFrom:
             configMapKeyRef:
-              name: avatar-agent-config
+              name: common-config
               key: DEFAULT_AVATAR_PROVIDER
+        - name: BITHUMAN_MODEL_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: avatar-agent-config
+              key: BITHUMAN_MODEL_PATH
+              optional: true
+        volumeMounts:
+        - name: models-volume
+          mountPath: /app/models/bithuman
+          readOnly: false
         resources:
           requests:
             memory: "1Gi"
@@ -107,4 +117,21 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "1000m"
+      volumes:
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: avatar-models-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: avatar-models-pvc
+  namespace: meeting-platform
+spec:
+  accessModes:
+    - ReadWriteMany  # CephFS supports ReadWriteMany (multiple pods can share the same volume)
+  resources:
+    requests:
+      storage: 20Gi  # Adjust based on your model file sizes
+  storageClassName: cephfs-with-secrets  # Use CephFS storage class with secrets for ReadWriteMany support
 

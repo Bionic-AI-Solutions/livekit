@@ -23,32 +23,32 @@ spec:
         - name: LIVEKIT_URL
           valueFrom:
             configMapKeyRef:
-              name: room-manager-agent-config
+              name: common-config
               key: LIVEKIT_URL
         - name: LIVEKIT_API_KEY
           valueFrom:
             secretKeyRef:
-              name: room-manager-agent-secret
+              name: common-secrets
               key: LIVEKIT_API_KEY
         - name: LIVEKIT_API_SECRET
           valueFrom:
             secretKeyRef:
-              name: room-manager-agent-secret
+              name: common-secrets
               key: LIVEKIT_API_SECRET
         - name: LANGFUSE_HOST
           valueFrom:
             secretKeyRef:
-              name: room-manager-agent-secret
+              name: common-secrets
               key: LANGFUSE_HOST
         - name: LANGFUSE_PUBLIC_KEY
           valueFrom:
             secretKeyRef:
-              name: room-manager-agent-secret
+              name: common-secrets
               key: LANGFUSE_PUBLIC_KEY
         - name: LANGFUSE_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: room-manager-agent-secret
+              name: common-secrets
               key: LANGFUSE_SECRET_KEY
         resources:
           requests:

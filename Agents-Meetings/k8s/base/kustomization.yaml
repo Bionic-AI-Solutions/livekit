@@ -5,6 +5,9 @@ namespace: meeting-platform
 
 resources:
   - namespace.yaml
+  # Common shared resources
+  - common/configmap.yaml
+  - common/secret.yaml
   # Application components
   - backend/deployment.yaml
   - backend/service.yaml
@@ -20,14 +23,13 @@ resources:
   - agents/avatar-agent/service.yaml
   - agents/avatar-agent/configmap.yaml
   - agents/avatar-agent/secret.yaml
+  - agents/avatar-agent/copy-models-job.yaml
   - agents/translation-agent/deployment.yaml
   - agents/translation-agent/service.yaml
   - agents/translation-agent/configmap.yaml
   - agents/translation-agent/secret.yaml
   - agents/room-manager-agent/deployment.yaml
   - agents/room-manager-agent/service.yaml
-  - agents/room-manager-agent/configmap.yaml
-  - agents/room-manager-agent/secret.yaml
 
 # Note: Postgres, LiveKit, and Langfuse are pre-existing services
 # They should be referenced via external service names in ConfigMaps

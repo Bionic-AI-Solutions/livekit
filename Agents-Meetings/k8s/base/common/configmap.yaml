@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-config
+  namespace: meeting-platform
+data:
+  # LiveKit Configuration
+  LIVEKIT_URL: "ws://livekit-server.livekit.svc.cluster.local:7880"
+  
+  # Langfuse Configuration
+  LANGFUSE_HOST: "langfuse-service"
+  LANGFUSE_PORT: "3000"
+  LANGFUSE_ENABLED: "true"
+  
+  # Avatar Configuration
+  DEFAULT_AVATAR_PROVIDER: "bithuman"
+  
+  # Supported Languages (used by backend and translation-agent)
+  SUPPORTED_LANGUAGES: "en,es,fr,de,ja,zh,hi"
+

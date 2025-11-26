@@ -23,32 +23,32 @@ spec:
         - name: LIVEKIT_URL
           valueFrom:
             configMapKeyRef:
-              name: translation-agent-config
+              name: common-config
               key: LIVEKIT_URL
         - name: LIVEKIT_API_KEY
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: LIVEKIT_API_KEY
         - name: LIVEKIT_API_SECRET
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: LIVEKIT_API_SECRET
         - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: OPENAI_API_KEY
         - name: DEEPGRAM_API_KEY
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: DEEPGRAM_API_KEY
         - name: ELEVENLABS_API_KEY
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: ELEVENLABS_API_KEY
         - name: GOOGLE_API_KEY
           valueFrom:
@@ -59,17 +59,17 @@ spec:
         - name: LANGFUSE_HOST
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: LANGFUSE_HOST
         - name: LANGFUSE_PUBLIC_KEY
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: LANGFUSE_PUBLIC_KEY
         - name: LANGFUSE_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: translation-agent-secret
+              name: common-secrets
               key: LANGFUSE_SECRET_KEY
         - name: STT_PROVIDER
           valueFrom:
